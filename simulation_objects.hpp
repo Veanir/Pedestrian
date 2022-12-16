@@ -56,11 +56,13 @@ class Crossing;
 class Agent : public SimulationObject {
 	private:
 	State state;
-	AgentConfig config;
-	float time_until_next_change;
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Crossing> crossing;
 	float getWaitingTime();
+
+	protected:
+	AgentConfig config;
+	float time_until_next_change;
 
 	public:
 	void changeState();
@@ -89,9 +91,11 @@ class Car : public Agent {
 	Car(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
 
-class Crossing : public SimulationObject{
+class Crossing: public SimulationObject{
 	private:
 	std::vector<std::shared_ptr<Agent>> agents;
+
+	float length;
 
 	float waitingTime;
 	int accidentCount;
@@ -102,4 +106,10 @@ class Crossing : public SimulationObject{
 
 	float getWaitingTime();
 	int getAccidentCount();
+	float getLength();
+
+	template<typename T>
+	void hookAgent(std::shared_ptr<T> agent);
+
+	Crossing(float length);
 };

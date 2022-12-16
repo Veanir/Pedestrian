@@ -5,27 +5,28 @@
 
 void Core::Update(float deltaTime)
 {
-  for(auto iter = this->objects.begin(); iter != this->objects.end(); ++iter){
+  for(auto &object:this->objects){
     //Yeet object if it wants to
-    if((*iter)->isYeeted()){
-      iter->swap(objects.back());
+    if(object->isYeeted()){
+      std::swap(this->objects.back(), object);
       objects.pop_back();      
       return;
     }
 
     //Update object
-    (*iter)->FixedUpdate(deltaTime);
-    (*iter)->Update();
+    object->FixedUpdate(deltaTime);
+    object->Update();
   }
 }
 
 template<typename T>
-std::shared_ptr<T> Core::Instantiate(std::shared_ptr<T> &&object)
+std::shared_ptr<T> Core::Instantiate(T* object)
 {
-  objects.push_back(std::move(object));
+  std::shared_ptr<T> pointer = std::make_shared<T>(*object);
+  objects.push_back(pointer);
   (*objects.back()).Start();
 
-  return object;
+  return pointer;
 }
 
 void CoreObject::FixedUpdate(float deltaTime){
@@ -64,14 +65,18 @@ int main(){
   config.yellow_red_time = 3;
 
   AgentConfig aconfig;
-  aconfig.speed = 69;
+  aconfig.speed = 2;
+  aconfig.reflex = 2;
+  aconfig.impatience_time = 120;
 
-  auto light = core.Instantiate(std::make_shared<Light>(config)); // Come back here. Pointer jest złego typu  
-  auto crossing = core.Instantiate(std::make_shared<Crossing>(new Crossing()));
-  auto pedestrian = core.Instantiate(std::make_shared<Pedestrian>(new Pedestrian(aconfig, crossing, light)));
-
-  // for(int i = 0; i < 100; i++)
-  //   core.Update(0.5f);
+  auto light = core.Instantiate(new Light(config));
+  core.Update(0.5f);
+  core.Update(11.0f);
+  auto crossing = core.Instantiate(new Crossing(5));
+  auto pedestrian = core.Instantiate(new Pedestrian(aconfig, crossing, light));
+  
+  for(int i = 0; i < 1000; i++)
+    core.Update(0.5f);
 
   return 1;
 }

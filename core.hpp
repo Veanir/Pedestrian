@@ -36,7 +36,7 @@ class Core
 
 	void Update(float deltaTime);
 	template<typename T>
-	std::shared_ptr<T> Instantiate(std::shared_ptr<T> &&object);
+	std::shared_ptr<T> Instantiate(T* object);
 
 	void Cleanup();
 };
