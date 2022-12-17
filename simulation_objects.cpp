@@ -16,6 +16,7 @@ LightColor Light::getColor(){
 
 Light::Light(LightConfig config){
 	this->config = config;
+	this->color = config.initial_color;
 }
 
 void Light::changeColor(){
@@ -66,12 +67,7 @@ bool trigger(float probability){
 }
 
 float Agent::getWaitingTime(){
-	switch(this->state){
-		case State::stationary:
-			return this->config.reflex;
-		default:
-			return 0;
-	}
+	return this->waiting_time;
 }
 
 void Agent::changeState(){
@@ -120,7 +116,9 @@ State Agent::getState(){
 }
 
 void Agent::Update(){
-	//blank for now
+	this->time_until_next_change -= this->DeltaTime();
+	this->config.impatience_time -= this->DeltaTime();
+	this->waiting_time += this->DeltaTime();
 }
 
 void Agent::Start(){
@@ -128,16 +126,18 @@ void Agent::Start(){
 }
 
 Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light){
-	std::cout << "constructing agent" << std::endl;
 	this->config = config;
 	this->crossing = crossing;
 	this->light = light;
 }
 
+Agent::~Agent(){
+	this->crossing->addWaitingTime(this->waiting_time);
+}
+
 // Pedestrian
 void Pedestrian::Update(){
-	this->time_until_next_change -= this->DeltaTime();
-	this->config.impatience_time -= this->DeltaTime();
+	Agent::Update();
 
 	if(this->time_until_next_change <= 0)
 		this->changeState();
@@ -152,8 +152,7 @@ void Pedestrian::Start(){
 //Car
 
 void Car::Update(){
-	this->time_until_next_change -= this->DeltaTime();
-	this->config.impatience_time -= this->DeltaTime();
+	Agent::Update();
 
 	if(this->time_until_next_change <= 0)
 		this->changeState();
@@ -169,17 +168,23 @@ void Car::Start(){
 void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
-	std::cout << "Crossing agents -> " << this->agents.size() << std::endl;
 	for(auto &agent:this->agents){
-		if(agent == nullptr)
-			std::cout << "null" << std::endl;
+		if(agent->isYeeted()){
+			std::swap(this->agents.back(),agent);
+			agents.pop_back();
+			continue;
+			}
 		if(agent->getState() != State::crossing){
 			continue;
 			}
 		if(std::dynamic_pointer_cast<Pedestrian>(agent))
-			std::cout << "Pedestrian crossing" << std::endl;
+			pedestrian_crossing = true;
 		else
-			std::cout << "Not pedestrian crossing" << std::endl; 
+			car_crossing = true;
+		if(pedestrian_crossing && car_crossing){
+			this->Crash();
+			break;
+		}
 	}
 }
 
@@ -187,12 +192,27 @@ void Crossing::Start(){
 	//Blank but needs to be implemented	
 }
 
+void Crossing::Crash(){
+	std::cout << "Crash" << std::endl;
+	this->accident_count++;
+	for(auto &agent: this->agents){
+		if(std::dynamic_pointer_cast<Pedestrian>(agent) && agent->getState() == State::crossing){
+			this->casualties_count++;
+			agent->Yeet();
+		}
+	}
+}
+
 float Crossing::getWaitingTime(){
-	return this->waitingTime;
+	return this->waiting_time;
 }
 
 int Crossing::getAccidentCount(){
-	return this->accidentCount;
+	return this->accident_count;
+}
+
+int Crossing::getCasualtiesCount(){
+	return this->casualties_count;
 }
 
 float Crossing::getLength(){
@@ -202,6 +222,10 @@ float Crossing::getLength(){
 template<typename T>
 void Crossing::hookAgent(std::shared_ptr<T> agent){ 
 	this->agents.push_back(agent);
+}
+
+void Crossing::addWaitingTime(float waiting_time){
+	this->waiting_time += waiting_time;
 }
 
 Crossing::Crossing(float length){
