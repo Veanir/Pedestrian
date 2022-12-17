@@ -53,14 +53,14 @@ class AgentConfig {
 
 class Crossing;
 
-class Agent : public SimulationObject {
+class Agent : public SimulationObject, public std::enable_shared_from_this<Agent>  {
 	private:
 	State state;
-	std::shared_ptr<Light> light;
-	std::shared_ptr<Crossing> crossing;
 	float getWaitingTime();
 
 	protected:
+	std::shared_ptr<Light> light;
+	std::shared_ptr<Crossing> crossing;
 	AgentConfig config;
 	float time_until_next_change;
 

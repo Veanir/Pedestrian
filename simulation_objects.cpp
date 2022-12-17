@@ -132,8 +132,6 @@ Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared
 	this->config = config;
 	this->crossing = crossing;
 	this->light = light;
-
-	crossing->hookAgent(std::shared_ptr<Agent>(this));
 }
 
 // Pedestrian
@@ -146,6 +144,7 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
+	this->crossing->hookAgent(shared_from_this());
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
 }
@@ -153,24 +152,31 @@ void Pedestrian::Start(){
 //Car
 
 void Car::Update(){
-	std::cout << "Dupa samochodu" << std::endl;
+	this->time_until_next_change -= this->DeltaTime();
+	this->config.impatience_time -= this->DeltaTime();
+
+	if(this->time_until_next_change <= 0)
+		this->changeState();
 }
 
 void Car::Start(){
-	std::cout << "Samochod Start" << std::endl;
+	this->crossing->hookAgent(shared_from_this());
+	if(trigger(this->config.rush_ratio))
+		this->config.impatience_time = 0;
 }
 
 //Crossing
 void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
+	std::cout << "Crossing agents -> " << this->agents.size() << std::endl;
 	for(auto &agent:this->agents){
-		std::cout << agent->GetTime()  << std::endl;
+		if(agent == nullptr)
+			std::cout << "null" << std::endl;
 		if(agent->getState() != State::crossing){
-			std::cout << "Not crossing" << std::endl;
 			continue;
 			}
-		if(dynamic_cast<Pedestrian*>(agent.get()) != nullptr)
+		if(std::dynamic_pointer_cast<Pedestrian>(agent))
 			std::cout << "Pedestrian crossing" << std::endl;
 		else
 			std::cout << "Not pedestrian crossing" << std::endl; 
@@ -178,7 +184,7 @@ void Crossing::Update(){
 }
 
 void Crossing::Start(){
-	
+	//Blank but needs to be implemented	
 }
 
 float Crossing::getWaitingTime(){

@@ -20,13 +20,12 @@ void Core::Update(float deltaTime)
 }
 
 template<typename T>
-std::shared_ptr<T> Core::Instantiate(T* object)
+std::shared_ptr<T> Core::Instantiate(std::shared_ptr<T> object)
 {
-  std::shared_ptr<T> pointer = std::make_shared<T>(*object);
-  objects.push_back(pointer);
+  objects.push_back(object);
   (*objects.back()).Start();
 
-  return pointer;
+  return object;
 }
 
 void CoreObject::FixedUpdate(float deltaTime){
@@ -69,11 +68,12 @@ int main(){
   aconfig.reflex = 2;
   aconfig.impatience_time = 120;
 
-  auto light = core.Instantiate(new Light(config));
+  auto light = core.Instantiate(std::make_shared<Light>(config));
+  auto crossing = core.Instantiate(std::make_shared<Crossing>(5));
   core.Update(0.5f);
+  auto car = core.Instantiate(std::make_shared<Car>(aconfig, crossing, light));
   core.Update(11.0f);
-  auto crossing = core.Instantiate(new Crossing(5));
-  auto pedestrian = core.Instantiate(new Pedestrian(aconfig, crossing, light));
+  auto pedestrian = core.Instantiate(std::make_shared<Pedestrian>(aconfig,crossing,light));
   
   for(int i = 0; i < 1000; i++)
     core.Update(0.5f);
