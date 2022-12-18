@@ -53,10 +53,14 @@ class SimulationObject : public CoreObject {
 
 class Core
 {
+	private:
+	float time;
+
 	public:
 	std::vector<std::shared_ptr<SimulationObject>> objects;
 
 	void Update(float deltaTime){
+		this->time += deltaTime;
 	  for(auto &object:this->objects){
 			if(object == nullptr)
 				continue;
@@ -79,6 +83,10 @@ class Core
 	  (*objects.back()).Start();
 
 	  return sharedPointer;
+	}
+
+	float getTime(){
+		return this->time;
 	}
 
 };

@@ -5,49 +5,35 @@
 #include <memory>
 #include <utility>
 
-int main(){
+int main() {
+  //Simulation Agents Configuration
+  AgentSpawnConfig config_pedestrian;
+  config_pedestrian.speed_min = 2;
+  config_pedestrian.speed_max = 5;
+  config_pedestrian.impatience_time_min = 60;
+  config_pedestrian.impatience_time_max = 180;
+  config_pedestrian.reflex_min = 0.1;
+  config_pedestrian.reflex_max = 4;
+  config_pedestrian.rush_ratio_min = 0.25;
+  config_pedestrian.rush_ratio_max = 0.5;
 
-  //randomize seed
-  srand(static_cast<unsigned>(time(0)));
+  AgentSpawnConfig config_car;
+  config_car.speed_min = 9;
+  config_car.speed_max = 22;
+  config_car.impatience_time_min = 120;
+  config_car.impatience_time_max = 360;
+  config_car.reflex_min = 1;
+  config_car.reflex_max = 8;
+  config_car.rush_ratio_min = 0.05;
+  config_car.rush_ratio_max = 0.2;
 
-  Core core;
-
-  auto crossing = core.Instantiate<Crossing>(5);
-
-  LightConfig config;
-  config.green_time = 10;
-  config.red_time = 10;
-  config.initial_color = LightColor::Red;
-
-  auto light = core.Instantiate<Light>(config);
-
-  AgentSpawnConfig spawn_config;
-  spawn_config.speed_min = 1;
-  spawn_config.speed_max = 4;
-  spawn_config.impatience_time_min = 60;
-  spawn_config.impatience_time_max = 180;
-  spawn_config.reflex_min = 0.5;
-  spawn_config.reflex_max = 4;
-  spawn_config.rush_ratio_min = 0.05;
-  spawn_config.rush_ratio_max = 0.4;
-
-  AgentConfig agent_config;
-  agent_config.impatience_time = 120;
-  agent_config.reflex = 2;
-  agent_config.rush_ratio = 0.3;
-  agent_config.speed = 2;
-
-  auto spawner = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light, crossing);
-  
-  spawner->setSpawnRate(10);
-  spawner->setSpawnConfig(spawn_config);
-
-  for(int i=0; i < 100; i++)
-    core.Update(0.5f);
-
-  std::cout << crossing->getScore().waiting_time << std::endl;
-
-
+  for(int i = 0; i < 100; i++){
+    std::cout << i << std::endl;
+    SimulationNode node;
+    node.pedestrian_config = config_pedestrian;
+    node.car_config = config_car;
+    node.Simulate(8, 5, 10,4);
+  }
 
   return 1;
 }

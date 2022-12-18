@@ -21,6 +21,8 @@ class LightConfig{
 	LightColor initial_color;
 
 	void Mutate();
+
+	LightConfig();
 };
 
 class Light : public SimulationObject {
@@ -33,6 +35,8 @@ class Light : public SimulationObject {
 	public:
 	void Update() override;
 	void Start() override;
+
+	void printLightConfig();
 
 	LightColor getColor();
 	Light(LightConfig config);
@@ -100,6 +104,8 @@ class CrossingScore{
 	float waiting_time;
 	int accident_count;
 	int casualties_count;
+
+	float Score();
 };
 
 class Crossing: public SimulationObject{

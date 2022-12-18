@@ -24,7 +24,6 @@ class AgentSpawnConfig{
 template <typename T>
 class AgentSpawner : public SimulationObject {
 
-	int count;
 
 	AgentSpawnConfig config;
 
@@ -39,7 +38,6 @@ class AgentSpawner : public SimulationObject {
 
 	void spawnAgent(){
 		AgentConfig config;
-
 		config.speed = this->getRandomNormal(this->config.speed_min, this->config.speed_max);
 		config.reflex = this->getRandomNormal(this->config.reflex_min, this->config.reflex_max);
 		config.impatience_time = this->getRandomNormal(this->config.impatience_time_min, this->config.impatience_time_max);
@@ -53,10 +51,16 @@ class AgentSpawner : public SimulationObject {
 		float stddev = (max-min)/2;
 
 		std::normal_distribution<float> dist(mean, stddev);
-		return dist(this->generator);
+		float result =  dist(this->generator);
+		if(result < min)
+			result = min;
+		else if(result > max)
+			result = max;
+		return result;
 	}
 
 	public:
+	int count;
 
 	void Update() override{		
 		this->time_until_next_spawn -= this->DeltaTime();
@@ -85,9 +89,39 @@ class AgentSpawner : public SimulationObject {
 
 		this->generator = gen;
 	}
-
-	~AgentSpawner<T>(){
-	std::cout << this->count << " " << this->GetTime() << std::endl;
-	}
 	
+};
+
+class SimulationNode {
+	public:
+	LightConfig pedestrian_light;
+	LightConfig car_light;
+	CrossingScore Score;
+
+	AgentSpawnConfig pedestrian_config;
+	AgentSpawnConfig car_config;
+
+	void Simulate(float time, float length, int pedestrian_rate, int car_rate){
+		Core core;
+
+		auto crossing = core.Instantiate<Crossing>(length);
+
+		auto light_p = core.Instantiate<Light>(pedestrian_light);
+		auto light_c = core.Instantiate<Light>(car_light);
+
+		auto spawner_p = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light_p, crossing);
+		spawner_p ->setSpawnConfig(pedestrian_config);
+		spawner_p->setSpawnRate(pedestrian_rate);
+
+		auto spawner_c = core.Instantiate<AgentSpawner<Car>>(&core, light_c, crossing);
+		spawner_c->setSpawnConfig(car_config);
+		spawner_c->setSpawnRate(car_rate);
+
+		int iterations = (time * 3600)/0.5;
+		for(int i = 0; i < iterations; i++)
+			core.Update(0.5f);
+
+		this->Score = crossing->getScore();
+		std::cout << this->Score.Score() << std::endl;
+	}
 };
