@@ -18,7 +18,11 @@ class LightConfig{
 	float yellow_red_time;
 	float red_time;
 
+	LightColor initial_color;
+
 	void Mutate();
+
+	LightConfig();
 };
 
 class Light : public SimulationObject {
@@ -31,6 +35,8 @@ class Light : public SimulationObject {
 	public:
 	void Update() override;
 	void Start() override;
+
+	void printLightConfig();
 
 	LightColor getColor();
 	Light(LightConfig config);
@@ -53,16 +59,19 @@ class AgentConfig {
 
 class Crossing;
 
-class Agent : public SimulationObject {
+class Agent : public SimulationObject, public std::enable_shared_from_this<Agent>  {
 	private:
 	State state;
-	AgentConfig config;
-	float time_until_next_change;
+
+	protected:
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Crossing> crossing;
-	float getWaitingTime();
+	AgentConfig config;
+	float time_until_next_change;
+	float waiting_time;
 
 	public:
+	float getWaitingTime();
 	void changeState();
 
 	State getState();
@@ -71,6 +80,7 @@ class Agent : public SimulationObject {
 	void Start() override;
 
 	Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light);
+	~Agent();
 };
 
 class Pedestrian : public Agent {
@@ -89,17 +99,37 @@ class Car : public Agent {
 	Car(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
 
-class Crossing : public SimulationObject{
+class CrossingScore{
+	public:
+	float waiting_time;
+	int accident_count;
+	int casualties_count;
+
+	float Score();
+};
+
+class Crossing: public SimulationObject{
 	private:
 	std::vector<std::shared_ptr<Agent>> agents;
 
-	float waitingTime;
-	int accidentCount;
+	float length;
+
+	CrossingScore score;
+
+	void Crash();
 
 	public:
 	void Update() override;
 	void Start() override;
 
-	float getWaitingTime();
-	int getAccidentCount();
+	CrossingScore getScore();
+
+	float getLength();
+
+	template<typename T>
+	void hookAgent(std::shared_ptr<T> agent);
+
+	void addWaitingTime(float waiting_time);
+
+	Crossing(float length);
 };

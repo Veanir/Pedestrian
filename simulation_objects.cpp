@@ -2,11 +2,39 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <random>
 
  
 //Light Config
+
+void mutate(float *x, float ratio){
+	std::random_device rd;
+	std::mt19937 engine(rd());
+
+	std::uniform_real_distribution<float> dis(-1.0, 1.0);
+	*x += *x * ratio * dis(engine);
+	*x = *x > 0 ? *x : 0;
+}
 void LightConfig::Mutate(){
-	//Yet to be implemented
+
+	mutate(&this->green_time, this->mutation_ratio);
+	mutate(&this->red_time, this->mutation_ratio);
+	mutate(&this->yellow_green_time, this->mutation_ratio);
+	mutate(&this->yellow_red_time, this->mutation_ratio);
+}
+
+LightConfig::LightConfig(){
+	std::random_device rd;
+	std::mt19937 engine(rd());
+
+  std::uniform_int_distribution<int> color_distribution(0, 3);
+	std::uniform_real_distribution<float> time_distribution(0.0, 180.0);
+
+  this->initial_color =static_cast<LightColor>(color_distribution(engine));
+	this->green_time = time_distribution(engine);
+	this->yellow_green_time = time_distribution(engine);
+	this->red_time = time_distribution(engine);
+	this->yellow_red_time = time_distribution(engine);
 }
 
 //Light
@@ -16,6 +44,7 @@ LightColor Light::getColor(){
 
 Light::Light(LightConfig config){
 	this->config = config;
+	this->color = config.initial_color;
 }
 
 void Light::changeColor(){
@@ -40,6 +69,13 @@ float Light::getWaitingTime(){
 	}
 }
 
+void Light::printLightConfig(){
+	std::cout << this->config.yellow_green_time << " | ";
+	std::cout << this->config.green_time << " | ";
+	std::cout << this->config.yellow_red_time << " | ";
+	std::cout << this->config.red_time << std::endl;
+}
+
 void Light::Start(){
 	//blank, but needs to be implemented
 }
@@ -55,38 +91,51 @@ void Light::Update(){
 
 //Agent
 
-float randomfInRange(float low, float high){
-	return low + static_cast<float> (rand()) / (static_cast<float>(static_cast<float>(RAND_MAX)/(high - low)));
-};
-
 bool trigger(float probability){
-	return randomfInRange(0,1) > probability;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	std::bernoulli_distribution dis(probability);
+	return dis(gen);
 }
 
 float Agent::getWaitingTime(){
-	switch(this->state){
-		case State::stationary:
-			return this->config.reflex;
-		default:
-			return 0;
-	}
+	return this->waiting_time;
 }
 
 void Agent::changeState(){
 	switch(static_cast<int>(this->state))
 	{
 		case State::stationary:
+			if(this->config.impatience_time <= 0){
+				this->state = State::crossing;
+				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+				return;
+			}
+			
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::reflex;
 				this->time_until_next_change = this->config.reflex;
 			}
+			else
+				this->time_until_next_change = 0;
 			break;
 		case State::reflex:
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::crossing;
-				this->time_until_next_change = 0; // <--- Come back Here
+				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+			}
+			else{
+				this->state = State::stationary;
+				this->time_until_next_change = 0;
 			}
 			break;
+		case State::crossing:
+			this->state = State::crossed;
+			break;
+		case State::crossed:
+			this->Yeet();
+			return;
 	}
 }
 
@@ -95,7 +144,9 @@ State Agent::getState(){
 }
 
 void Agent::Update(){
-	//blank for now
+	this->time_until_next_change -= this->DeltaTime();
+	this->config.impatience_time -= this->DeltaTime();
+	this->waiting_time += this->DeltaTime();
 }
 
 void Agent::Start(){
@@ -106,25 +157,41 @@ Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared
 	this->config = config;
 	this->crossing = crossing;
 	this->light = light;
+
+	this->state = State::stationary;
+}
+
+Agent::~Agent(){
+	this->crossing->addWaitingTime(this->waiting_time);
 }
 
 // Pedestrian
 void Pedestrian::Update(){
+	Agent::Update();
 
+	if(this->time_until_next_change <= 0)
+		this->changeState();
 }
 
 void Pedestrian::Start(){
-
+	this->crossing->hookAgent(shared_from_this());
+	if(trigger(this->config.rush_ratio))
+		this->config.impatience_time = 0;
 }
 
 //Car
 
 void Car::Update(){
-	std::cout << "Dupa samochodu" << std::endl;
+	Agent::Update();
+
+	if(this->time_until_next_change <= 0)
+		this->changeState();
 }
 
 void Car::Start(){
-	std::cout << "Samochod Start" << std::endl;
+	this->crossing->hookAgent(shared_from_this());
+	if(trigger(this->config.rush_ratio))
+		this->config.impatience_time = 0;
 }
 
 //Crossing
@@ -132,22 +199,62 @@ void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
 	for(auto &agent:this->agents){
-		agent->getState();
+		if(agent->isYeeted()){
+			std::swap(this->agents.back(),agent);
+			agents.pop_back();
+			continue;
+			}
+		if(agent->getState() != State::crossing){
+			continue;
+			}
+		if(std::dynamic_pointer_cast<Pedestrian>(agent))
+			pedestrian_crossing = true;
+		else
+			car_crossing = true;
+		if(pedestrian_crossing && car_crossing){
+			this->Crash();
+			break;
+		}
 	}
 }
 
 void Crossing::Start(){
-	
+	//Blank but needs to be implemented	
 }
 
-float Crossing::getWaitingTime(){
-	return this->waitingTime;
+void Crossing::Crash(){
+	this->score.accident_count++;
+	for(auto &agent: this->agents){
+		if(std::dynamic_pointer_cast<Pedestrian>(agent) && agent->getState() == State::crossing){
+			this->score.casualties_count++;
+			agent->Yeet();
+		}
+	}
 }
 
-int Crossing::getAccidentCount(){
-	return this->accidentCount;
+float Crossing::getLength(){
+	return this->length;
 }
 
+template<typename T>
+void Crossing::hookAgent(std::shared_ptr<T> agent){ 
+	this->agents.push_back(agent);
+}
 
+void Crossing::addWaitingTime(float waiting_time){
+	this->score.waiting_time += waiting_time;
+}
+
+CrossingScore Crossing::getScore(){
+	return this->score;
+}
+
+float CrossingScore::Score(){
+	return (this->waiting_time/1000) * accident_count;
+}
+
+Crossing::Crossing(float length){
+	this->length = length;
+}
 
 
