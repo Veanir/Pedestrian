@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <random>
 
  
 //Light Config
@@ -58,12 +59,12 @@ void Light::Update(){
 
 //Agent
 
-float randomfInRange(float low, float high){
-	return low + static_cast<float> (rand()) / (static_cast<float>(static_cast<float>(RAND_MAX)/(high - low)));
-};
-
 bool trigger(float probability){
-	return randomfInRange(0,1) < probability;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	std::bernoulli_distribution dis(probability);
+	return dis(gen);
 }
 
 float Agent::getWaitingTime(){
@@ -137,6 +138,7 @@ Agent::~Agent(){
 
 // Pedestrian
 void Pedestrian::Update(){
+	std::cout << "Update " << this << std::endl;
 	Agent::Update();
 
 	if(this->time_until_next_change <= 0)
@@ -144,6 +146,7 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
+	std::cout << "Start " << this << std::endl;
 	this->crossing->hookAgent(shared_from_this());
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
@@ -194,25 +197,13 @@ void Crossing::Start(){
 
 void Crossing::Crash(){
 	std::cout << "Crash" << std::endl;
-	this->accident_count++;
+	this->score.accident_count++;
 	for(auto &agent: this->agents){
 		if(std::dynamic_pointer_cast<Pedestrian>(agent) && agent->getState() == State::crossing){
-			this->casualties_count++;
+			this->score.casualties_count++;
 			agent->Yeet();
 		}
 	}
-}
-
-float Crossing::getWaitingTime(){
-	return this->waiting_time;
-}
-
-int Crossing::getAccidentCount(){
-	return this->accident_count;
-}
-
-int Crossing::getCasualtiesCount(){
-	return this->casualties_count;
 }
 
 float Crossing::getLength(){
@@ -225,7 +216,11 @@ void Crossing::hookAgent(std::shared_ptr<T> agent){
 }
 
 void Crossing::addWaitingTime(float waiting_time){
-	this->waiting_time += waiting_time;
+	this->score.waiting_time += waiting_time;
+}
+
+CrossingScore Crossing::getScore(){
+	return this->score;
 }
 
 Crossing::Crossing(float length){

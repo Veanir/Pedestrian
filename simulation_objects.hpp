@@ -95,15 +95,20 @@ class Car : public Agent {
 	Car(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
 
+class CrossingScore{
+	public:
+	float waiting_time;
+	int accident_count;
+	int casualties_count;
+};
+
 class Crossing: public SimulationObject{
 	private:
 	std::vector<std::shared_ptr<Agent>> agents;
 
 	float length;
 
-	float waiting_time;
-	int accident_count;
-	int casualties_count;
+	CrossingScore score;
 
 	void Crash();
 
@@ -111,9 +116,8 @@ class Crossing: public SimulationObject{
 	void Update() override;
 	void Start() override;
 
-	float getWaitingTime();
-	int getAccidentCount();
-	int getCasualtiesCount();
+	CrossingScore getScore();
+
 	float getLength();
 
 	template<typename T>

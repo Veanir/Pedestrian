@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <iostream>
 
 class Time {
 	public:
@@ -47,6 +48,13 @@ class Core
 
 	void Update(float deltaTime){
 	  for(auto &object:this->objects){
+
+		if(object == nullptr)
+			{
+	      std::swap(this->objects.back(), object);
+	      objects.pop_back();      
+	      return;
+			}
     //Yeet object if it wants to
     if(object->isYeeted()){
       object.reset();
