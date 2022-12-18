@@ -28,7 +28,7 @@ class AgentSpawner : public SimulationObject {
 
 	AgentSpawnConfig config;
 
-	Core *core;
+	Core* core;
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Crossing> crossing;
 
@@ -45,8 +45,7 @@ class AgentSpawner : public SimulationObject {
 		config.impatience_time = this->getRandomNormal(this->config.impatience_time_min, this->config.impatience_time_max);
 		config.rush_ratio = this->getRandomNormal(this->config.rush_ratio_min, this->config.rush_ratio_max);
 
-
-		this->core->Instantiate(std::make_shared<T>(config, crossing, light));
+		this->core->template Instantiate<T>(config, this->crossing, this->light);
 	}
 
 	float getRandomNormal(float min, float max){
@@ -80,11 +79,7 @@ class AgentSpawner : public SimulationObject {
 		this->config = config;
 	}
 
-	AgentSpawner<T>(Core *core, std::shared_ptr<Light> light, std::shared_ptr<Crossing> crossing){
-		this->core = core;
-		this->light = light;
-		this->crossing = crossing;
-
+	AgentSpawner<T>(Core* core, std::shared_ptr<Light> light, std::shared_ptr<Crossing> crossing) : core(core), light(light), crossing(crossing){
 		std::random_device rd;
 		std::mt19937 gen(rd());
 

@@ -8,11 +8,20 @@ class Time {
 	public:
 	float time;
 	float deltaTime;
+
+	Time(){
+		this->time = 0;
+		this->deltaTime = 0;
+	}
 };
 
 class CoreObject
 {
 	public:
+	CoreObject(){
+		this->yeet_flag = false;
+	}
+
 	void FixedUpdate(float deltaTime){
 	  this->time.time += deltaTime;
 	  this->time.deltaTime = deltaTime;
@@ -29,6 +38,7 @@ class CoreObject
 	float DeltaTime(){
 	  return this->time.deltaTime;
 	}
+
 
 	private:
 	Time time;
@@ -48,33 +58,29 @@ class Core
 
 	void Update(float deltaTime){
 	  for(auto &object:this->objects){
-
-		if(object == nullptr)
-			{
+			if(object == nullptr)
+				continue;
+	    //Yeet object if it wants to
+	    if(object->isYeeted()){
 	      std::swap(this->objects.back(), object);
 	      objects.pop_back();      
 	      return;
-			}
-    //Yeet object if it wants to
-    if(object->isYeeted()){
-      object.reset();
-      std::swap(this->objects.back(), object);
-      objects.pop_back();      
-      return;
-    }
-    //Update object
-    object->FixedUpdate(deltaTime);
-    object->Update();
+	    }
+	    //Update object
+	    object->FixedUpdate(deltaTime);
+	    object->Update();
 		}
 	}
 
-	template<typename T>
-	std::shared_ptr<T> Instantiate(std::shared_ptr<T> object){
-	  objects.push_back(object);
+	template<typename T, typename... Args>
+	std::shared_ptr<T> Instantiate(Args... args){
+		auto sharedPointer = std::make_shared<T>(std::forward<Args>(args)...);
+		this->objects.push_back(sharedPointer);
 	  (*objects.back()).Start();
 
-	  return object;
+	  return sharedPointer;
 	}
+
 };
 
 

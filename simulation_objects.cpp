@@ -130,6 +130,8 @@ Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared
 	this->config = config;
 	this->crossing = crossing;
 	this->light = light;
+
+	this->state = State::stationary;
 }
 
 Agent::~Agent(){
@@ -138,7 +140,6 @@ Agent::~Agent(){
 
 // Pedestrian
 void Pedestrian::Update(){
-	std::cout << "Update " << this << std::endl;
 	Agent::Update();
 
 	if(this->time_until_next_change <= 0)
@@ -146,7 +147,6 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
-	std::cout << "Start " << this << std::endl;
 	this->crossing->hookAgent(shared_from_this());
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;

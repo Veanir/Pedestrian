@@ -12,33 +12,41 @@ int main(){
 
   Core core;
 
-  LightConfig light_config;
-  light_config.green_time = 10;
-  light_config.red_time = 10;
-  light_config.yellow_green_time = 3;
-  light_config.yellow_red_time = 3;
-  light_config.initial_color = LightColor::YellowRed;
+  auto crossing = core.Instantiate<Crossing>(5);
 
-  auto light = core.Instantiate(std::make_shared<Light>(light_config));
-  auto crossing = core.Instantiate(std::make_shared<Crossing>(5));
+  LightConfig config;
+  config.green_time = 10;
+  config.red_time = 10;
+  config.initial_color = LightColor::Red;
 
-  auto agentSpawner = core.Instantiate(std::make_shared<AgentSpawner<Pedestrian>>(&core,light, crossing ));
-
-  agentSpawner->setSpawnRate(30);
+  auto light = core.Instantiate<Light>(config);
 
   AgentSpawnConfig spawn_config;
-  spawn_config.speed_min = 0.5;
+  spawn_config.speed_min = 1;
   spawn_config.speed_max = 4;
   spawn_config.impatience_time_min = 60;
   spawn_config.impatience_time_max = 180;
   spawn_config.reflex_min = 0.5;
   spawn_config.reflex_max = 4;
   spawn_config.rush_ratio_min = 0.05;
-  spawn_config.rush_ratio_max = 0.5;
-  agentSpawner->setSpawnConfig(spawn_config);
+  spawn_config.rush_ratio_max = 0.4;
 
-  for(int i = 0; i <100; i++)
+  AgentConfig agent_config;
+  agent_config.impatience_time = 120;
+  agent_config.reflex = 2;
+  agent_config.rush_ratio = 0.3;
+  agent_config.speed = 2;
+
+  auto spawner = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light, crossing);
+  
+  spawner->setSpawnRate(10);
+  spawner->setSpawnConfig(spawn_config);
+
+  for(int i=0; i < 100; i++)
     core.Update(0.5f);
+
+  std::cout << crossing->getScore().waiting_time << std::endl;
+
 
 
   return 1;
