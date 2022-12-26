@@ -55,6 +55,8 @@ class AgentConfig {
 	float reflex;
 	float impatience_time;
 	float rush_ratio;
+
+	AgentConfig();
 };
 
 class Crossing;

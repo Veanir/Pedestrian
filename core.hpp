@@ -62,8 +62,6 @@ class Core
 	void Update(float deltaTime){
 		this->time += deltaTime;
 	  for(auto &object:this->objects){
-			if(object == nullptr)
-				continue;
 	    //Yeet object if it wants to
 	    if(object->isYeeted()){
 	      std::swap(this->objects.back(), object);

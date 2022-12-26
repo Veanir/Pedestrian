@@ -45,6 +45,7 @@ LightColor Light::getColor(){
 Light::Light(LightConfig config){
 	this->config = config;
 	this->color = config.initial_color;
+	this->time_until_next_change = this->getWaitingTime();
 }
 
 void Light::changeColor(){
@@ -91,12 +92,16 @@ void Light::Update(){
 
 //Agent
 
-bool trigger(float probability){
-	std::random_device rd;
-	std::mt19937 gen(rd());
+AgentConfig::AgentConfig(){
+	this->speed = 1;
+	this->impatience_time = 60;
+	this->reflex = 1;
+	this->rush_ratio = 0.1;
+}
 
-	std::bernoulli_distribution dis(probability);
-	return dis(gen);
+bool trigger(float probability){
+	//TODO IMPLEMENT THIS SHIT
+	return false;
 }
 
 float Agent::getWaitingTime(){
@@ -159,6 +164,7 @@ Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared
 	this->light = light;
 
 	this->state = State::stationary;
+	this->time_until_next_change = 0;
 }
 
 Agent::~Agent(){

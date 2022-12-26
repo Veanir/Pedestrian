@@ -17,6 +17,17 @@ class AgentSpawnConfig{
 	float impatience_time_max;
 	float rush_ratio_min;
 	float rush_ratio_max;
+
+	AgentSpawnConfig(){
+		this->speed_min = 1;
+		this->speed_max = 5;
+		this->impatience_time_min = 60;
+		this->impatience_time_max = 180;
+		this->reflex_min = 0.5;
+		this->reflex_max = 4;
+		this->rush_ratio_min = 0.1;
+		this->rush_ratio_max = 0.5;
+	}
 };
 
 
@@ -38,25 +49,12 @@ class AgentSpawner : public SimulationObject {
 
 	void spawnAgent(){
 		AgentConfig config;
-		config.speed = this->getRandomNormal(this->config.speed_min, this->config.speed_max);
-		config.reflex = this->getRandomNormal(this->config.reflex_min, this->config.reflex_max);
-		config.impatience_time = this->getRandomNormal(this->config.impatience_time_min, this->config.impatience_time_max);
-		config.rush_ratio = this->getRandomNormal(this->config.rush_ratio_min, this->config.rush_ratio_max);
 
 		this->core->template Instantiate<T>(config, this->crossing, this->light);
 	}
 
 	float getRandomNormal(float min, float max){
-		float mean = (min + max)/2;
-		float stddev = (max-min)/2;
-
-		std::normal_distribution<float> dist(mean, stddev);
-		float result =  dist(this->generator);
-		if(result < min)
-			result = min;
-		else if(result > max)
-			result = max;
-		return result;
+		return 1;
 	}
 
 	public:
@@ -68,7 +66,7 @@ class AgentSpawner : public SimulationObject {
 		if(this->time_until_next_spawn <= 0){
 			this->count++;
 			this->spawnAgent();
-			this->time_until_next_spawn = this->period + period_distribution(generator);
+			this->time_until_next_spawn = this->period + 1;
 		}
 	}
 
@@ -88,6 +86,7 @@ class AgentSpawner : public SimulationObject {
 		std::mt19937 gen(rd());
 
 		this->generator = gen;
+		this->time_until_next_spawn = 0;
 	}
 	
 };
