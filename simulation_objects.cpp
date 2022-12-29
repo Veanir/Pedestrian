@@ -93,7 +93,7 @@ void Light::Update(){
 //Agent
 
 AgentConfig::AgentConfig(){
-	this->speed = 1;
+	this->speed = 5;
 	this->impatience_time = 60;
 	this->reflex = 1;
 	this->rush_ratio = 0.1;
@@ -158,11 +158,7 @@ void Agent::Start(){
 	//blank for now
 }
 
-Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light){
-	this->config = config;
-	this->crossing = crossing;
-	this->light = light;
-
+Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : config(config), crossing(crossing), light(light){
 	this->state = State::stationary;
 	this->time_until_next_change = 0;
 }
@@ -180,7 +176,6 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
-	this->crossing->hookAgent(shared_from_this());
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
 }
@@ -205,11 +200,11 @@ void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
 	for(auto &agent:this->agents){
-		if(agent->isYeeted()){
-			std::swap(this->agents.back(),agent);
-			agents.pop_back();
+		if(agent -> getState() == State::crossed){
+			std::swap(agent, this->agents.back());
+			this->agents.pop_back();
 			continue;
-			}
+		}
 		if(agent->getState() != State::crossing){
 			continue;
 			}
