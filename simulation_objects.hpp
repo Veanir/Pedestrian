@@ -3,6 +3,7 @@
 #include "core.hpp"
 #include <memory>
 #include <random>
+#include <vector>
 
 enum LightColor {
 	YellowGreen,
@@ -120,7 +121,7 @@ class CrossingScore{
 
 class Crossing: public SimulationObject{
 	private:
-	std::vector<std::shared_ptr<Agent>> agents;
+	std::vector<Agent*> agents;
 
 	float length;
 
@@ -136,9 +137,11 @@ class Crossing: public SimulationObject{
 	float getLength();
 
 	template<typename T>
-	void hookAgent(std::shared_ptr<T> agent);
+	void hookAgent(T* agent);
 
 	void addWaitingTime(float waiting_time);
 
 	Crossing(float length);
 };
+
+#include "simulation_objects_impl.hpp"

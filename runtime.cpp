@@ -1,6 +1,6 @@
 #include "simulation_objects.hpp"
 #include "core.hpp"
-//#include "gamemaster.hpp"
+#include "gamemaster.hpp"
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -16,18 +16,17 @@ int main() {
 
   auto light = core.Instantiate<Light>(light_config);
   auto crossing = core.Instantiate<Crossing>(5);
-
-  // AgentSpawnConfig config;
-  // auto spawner = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light, crossing );
-  // spawner->setSpawnConfig(config);
-  // spawner->setSpawnRate(10);
-
-  for(int i = 0; i < 100; i++)
   {
-    auto pedestrian = core.Instantiate<Pedestrian>(AgentConfig(), crossing, light);
-    crossing->hookAgent(pedestrian);
+    auto pedestrian = core.Instantiate<Pedestrian>(AgentConfig(),crossing, light);
   }
 
+  AgentSpawnConfig config;
+  auto spawner = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light, crossing );
+  spawner->setSpawnConfig(config);
+  spawner->setSpawnRate(10);
+
+  for(int i = 0; i < 2 * 8 * 3600; i++)
+    core.Update(0.5f);
 
   return 1;
 }

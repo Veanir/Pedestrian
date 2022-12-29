@@ -1,3 +1,4 @@
+#pragma once
 #include "simulation_objects.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -176,6 +177,7 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
+	this->crossing->hookAgent(this);
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
 }
@@ -190,7 +192,7 @@ void Car::Update(){
 }
 
 void Car::Start(){
-	this->crossing->hookAgent(shared_from_this());
+	this->crossing->hookAgent(this);
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
 }
@@ -200,6 +202,8 @@ void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
 	for(auto &agent:this->agents){
+		if(agent == nullptr)
+			std::cout << "NULLPTR" << std::endl;
 		if(agent -> getState() == State::crossed){
 			std::swap(agent, this->agents.back());
 			this->agents.pop_back();
@@ -208,7 +212,7 @@ void Crossing::Update(){
 		if(agent->getState() != State::crossing){
 			continue;
 			}
-		if(std::dynamic_pointer_cast<Pedestrian>(agent))
+		if(dynamic_cast<Pedestrian*>(agent))
 			pedestrian_crossing = true;
 		else
 			car_crossing = true;
@@ -226,7 +230,7 @@ void Crossing::Start(){
 void Crossing::Crash(){
 	this->score.accident_count++;
 	for(auto &agent: this->agents){
-		if(std::dynamic_pointer_cast<Pedestrian>(agent) && agent->getState() == State::crossing){
+		if(dynamic_cast<Pedestrian*>(agent) && agent->getState() == State::crossing){
 			this->score.casualties_count++;
 			agent->Yeet();
 		}
@@ -238,7 +242,7 @@ float Crossing::getLength(){
 }
 
 template<typename T>
-void Crossing::hookAgent(std::shared_ptr<T> agent){ 
+void Crossing::hookAgent(T* agent){ 
 	this->agents.push_back(agent);
 }
 
