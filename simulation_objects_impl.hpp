@@ -79,6 +79,7 @@ void Light::printLightConfig(){
 }
 
 void Light::Start(){
+	std::cout << "Light [" << this << "] started" << std::endl;
 	//blank, but needs to be implemented
 }
 
@@ -88,6 +89,7 @@ void Light::Update(){
 	if(this->time_until_next_change <= 0){
 		this->changeColor();
 		this->time_until_next_change = this->getWaitingTime();
+		std::cout << "Light [" << this << "] zmienil kolor na -> " << this->color << std::endl;
 	}
 }
 
@@ -109,6 +111,9 @@ float Agent::getWaitingTime(){
 	return this->waiting_time;
 }
 
+void Agent::printAction(){
+	std::cout << "Agent [" << this << "] zmienil stan na -> " <<  this->getState() << std::endl;
+}
 void Agent::changeState(){
 	switch(static_cast<int>(this->state))
 	{
@@ -116,12 +121,18 @@ void Agent::changeState(){
 			if(this->config.impatience_time <= 0){
 				this->state = State::crossing;
 				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 				return;
 			}
 			
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::reflex;
 				this->time_until_next_change = this->config.reflex;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			else
 				this->time_until_next_change = 0;
@@ -130,14 +141,23 @@ void Agent::changeState(){
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::crossing;
 				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			else{
 				this->state = State::stationary;
 				this->time_until_next_change = 0;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			break;
 		case State::crossing:
 			this->state = State::crossed;
+			#ifdef DEBUG
+			this->printAction();
+			#endif
 			break;
 		case State::crossed:
 			this->Yeet();
@@ -182,6 +202,10 @@ void Pedestrian::Start(){
 		this->config.impatience_time = 0;
 }
 
+void Pedestrian::printAction(){
+	std::cout << "Pedestrian [" << this << "] zmienil stan ma -> " <<  this->getState() << std::endl;
+}
+
 //Car
 
 void Car::Update(){
@@ -197,18 +221,21 @@ void Car::Start(){
 		this->config.impatience_time = 0;
 }
 
+void Car::printAction(){
+	std::cout << "Car [" << this << "] zmienil stan na -> " <<  this->getState() << std::endl;
+}
+
 //Crossing
 void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
-	for(auto &agent:this->agents){
-		if(agent == nullptr)
-			std::cout << "NULLPTR" << std::endl;
-		if(agent -> getState() == State::crossed){
-			std::swap(agent, this->agents.back());
-			this->agents.pop_back();
+	for (int i = this->agents.size() - 1; i >= 0; i--){
+		if(this->agents[i]->isYeeted()){
+			this->agents.erase(this->agents.begin() + i);
 			continue;
 		}
+	}
+	for(auto &agent:this->agents){
 		if(agent->getState() != State::crossing){
 			continue;
 			}
@@ -235,6 +262,10 @@ void Crossing::Crash(){
 			agent->Yeet();
 		}
 	}
+
+	#ifdef DEBUG
+	std::cout << "Crossing [" << this << "] zderzenie" << std::endl;
+	#endif
 }
 
 float Crossing::getLength(){

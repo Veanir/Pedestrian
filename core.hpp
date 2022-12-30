@@ -27,7 +27,10 @@ class CoreObject
 	  this->time.deltaTime = deltaTime;
 	}
 	void Yeet(){
-	  this->yeet_flag = true;
+		#ifdef DEBUG
+		std::cout << "Yeeting object: " << this << std::endl;
+		#endif
+	 	this->yeet_flag = true;
 	}
 	bool isYeeted(){
 	  return this->yeet_flag;
@@ -49,10 +52,6 @@ class SimulationObject : public CoreObject {
 	public:
 	virtual void Update() = 0;
 	virtual void Start() = 0;
-
-	~SimulationObject(){
-		std::cout << "SimulationObject destroyed" << std::endl;
-	}
 };
 
 class Core

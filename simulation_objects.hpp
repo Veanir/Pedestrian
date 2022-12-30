@@ -72,6 +72,8 @@ class Agent : public SimulationObject, public std::enable_shared_from_this<Agent
 	private:
 	State state;
 
+	virtual void printAction();
+
 	protected:
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Crossing> crossing;
@@ -98,6 +100,9 @@ class Pedestrian : public Agent {
 	void Update() override;
 
 	void Start() override;
+
+	void printAction() override;
+
 	Pedestrian(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
 
@@ -105,6 +110,8 @@ class Car : public Agent {
 	public:
 	void Update() override;
 	void Start() override;
+
+	void printAction() override;
 
 	Car(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };

@@ -45,6 +45,8 @@ class AgentSpawner : public SimulationObject {
 
 	AgentSpawnConfig config;
 
+	int spawn_count;
+
 	float getRandomFloat(float min, float max){
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -66,8 +68,11 @@ class AgentSpawner : public SimulationObject {
 		agent_config.impatience_time = getRandomFloat(config.impatience_time_min, config.impatience_time_max);
 		agent_config.rush_ratio = getRandomFloat(config.rush_ratio_min, config.rush_ratio_max);
 
-		//auto agent = this->core->Instantiate<T>(agent_config, crossing, light);
-		auto agent = this->core->Instantiate<Pedestrian>(agent_config, crossing, light);
+		auto agent = this->core->Instantiate<T>(agent_config, crossing, light);
+		this->spawn_count++;
+		#ifdef DEBUG
+		std::cout << "Spawned agent [" << agent.get() << "]" << std::endl;
+		#endif
 	}
 
 	public:
@@ -85,20 +90,14 @@ class AgentSpawner : public SimulationObject {
 	} 
 
 	void Update() override {
-		this->spawnAgent();
-		//this->time_until_next_spawn -= this->DeltaTime();
-		//if(this->time_until_next_spawn <= 0){
-			//this->spawnAgent();
-			//this->time_until_next_spawn = this->spawn_period + getRandomFloatNormalDistribution(0, this->spawn_period/4);
-		//}
+		this->time_until_next_spawn -= this->DeltaTime();
+		if(this->time_until_next_spawn <= 0){
+			this->spawnAgent();
+			this->time_until_next_spawn = this->spawn_period + getRandomFloatNormalDistribution(0, this->spawn_period/4);
+		}
 	}
 
-	void Start() override {
-		//this->spawnAgent();
-		//this->spawnAgent();
-		//this->spawnAgent();
-		//this->spawnAgent();
-	}
+	void Start() override {}
 };
 
 class SimulationNode {
@@ -111,26 +110,26 @@ class SimulationNode {
 	AgentSpawnConfig car_config;
 
 	void Simulate(float time, float length, int pedestrian_rate, int car_rate){
-		//Core core;
+		Core core;
 
-		//auto crossing = core.Instantiate<Crossing>(length);
+		auto crossing = core.Instantiate<Crossing>(length);
 
-		//auto light_p = core.Instantiate<Light>(pedestrian_light);
-		//auto light_c = core.Instantiate<Light>(car_light);
+		auto light_p = core.Instantiate<Light>(pedestrian_light);
+		auto light_c = core.Instantiate<Light>(car_light);
 
-		//auto spawner_p = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light_p, crossing);
-		//spawner_p ->setSpawnConfig(pedestrian_config);
-		//spawner_p->setSpawnRate(pedestrian_rate);
+		auto spawner_p = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light_p, crossing);
+		spawner_p ->setSpawnConfig(pedestrian_config);
+		spawner_p->setSpawnRate(pedestrian_rate);
 
-		//auto spawner_c = core.Instantiate<AgentSpawner<Car>>(&core, light_c, crossing);
-		//spawner_c->setSpawnConfig(car_config);
-		//spawner_c->setSpawnRate(car_rate);
+		auto spawner_c = core.Instantiate<AgentSpawner<Car>>(&core, light_c, crossing);
+		spawner_c->setSpawnConfig(car_config);
+		spawner_c->setSpawnRate(car_rate);
 
-		//int iterations = (time * 3600)/0.5;
-		//for(int i = 0; i < iterations; i++)
-			//core.Update(0.5f);
+		int iterations = (time * 3600)/0.5;
+		for(int i = 0; i < iterations; i++)
+			core.Update(0.5f);
 
-		//this->Score = crossing->getScore();
-		//std::cout << this->Score.Score() << std::endl;
+		this->Score = crossing->getScore();
+		std::cout << this->Score.Score() << std::endl;
 	}
 };
