@@ -17,79 +17,87 @@ class AgentSpawnConfig{
 	float impatience_time_max;
 	float rush_ratio_min;
 	float rush_ratio_max;
+
+	AgentSpawnConfig(){
+		this->speed_min = 1;
+		this->speed_max = 5;
+		this->impatience_time_min = 60;
+		this->impatience_time_max = 180;
+		this->reflex_min = 0.5;
+		this->reflex_max = 4;
+		this->rush_ratio_min = 0.1;
+		this->rush_ratio_max = 0.5;
+	}
 };
 
 
 
 template <typename T>
 class AgentSpawner : public SimulationObject {
+	private:
+	Core *core;
 
+	float spawn_period;
+	float time_until_next_spawn;
 
-	AgentSpawnConfig config;
-
-	Core* core;
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Crossing> crossing;
 
-	std::mt19937 generator;
-	float period;
-	std::uniform_real_distribution<float> period_distribution;
-	float time_until_next_spawn;
+	AgentSpawnConfig config;
 
-	void spawnAgent(){
-		AgentConfig config;
-		config.speed = this->getRandomNormal(this->config.speed_min, this->config.speed_max);
-		config.reflex = this->getRandomNormal(this->config.reflex_min, this->config.reflex_max);
-		config.impatience_time = this->getRandomNormal(this->config.impatience_time_min, this->config.impatience_time_max);
-		config.rush_ratio = this->getRandomNormal(this->config.rush_ratio_min, this->config.rush_ratio_max);
+	int spawn_count;
 
-		this->core->template Instantiate<T>(config, this->crossing, this->light);
+	float getRandomFloat(float min, float max){
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_real_distribution<> dis(min, max);
+		return dis(gen);
 	}
 
-	float getRandomNormal(float min, float max){
-		float mean = (min + max)/2;
-		float stddev = (max-min)/2;
+	float getRandomFloatNormalDistribution(float mean, float std_dev){
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::normal_distribution<> dis(mean, std_dev);
+		return dis(gen);
+	}
 
-		std::normal_distribution<float> dist(mean, stddev);
-		float result =  dist(this->generator);
-		if(result < min)
-			result = min;
-		else if(result > max)
-			result = max;
-		return result;
+	void spawnAgent(){
+		AgentConfig agent_config;
+		agent_config.speed = getRandomFloat(config.speed_min, config.speed_max);
+		agent_config.reflex = getRandomFloat(config.reflex_min, config.reflex_max);
+		agent_config.impatience_time = getRandomFloat(config.impatience_time_min, config.impatience_time_max);
+		agent_config.rush_ratio = getRandomFloat(config.rush_ratio_min, config.rush_ratio_max);
+
+		auto agent = this->core->Instantiate<T>(agent_config, crossing, light);
+		this->spawn_count++;
+		#ifdef DEBUG
+		std::cout << "Spawned agent [" << agent.get() << "]" << std::endl;
+		#endif
 	}
 
 	public:
-	int count;
-
-	void Update() override{		
-		this->time_until_next_spawn -= this->DeltaTime();
-
-		if(this->time_until_next_spawn <= 0){
-			this->count++;
-			this->spawnAgent();
-			this->time_until_next_spawn = this->period + period_distribution(generator);
-		}
+	AgentSpawner(Core *core, std::shared_ptr<Light> light, std::shared_ptr<Crossing> crossing) : core(core), light(light), crossing(crossing){
+		this->spawn_period = 1;
+		this->time_until_next_spawn = 0;
 	}
 
-	void Start() override {}
-
-	void setSpawnRate(int spawn_rate){
-		this->period = 60/spawn_rate;
-		this->period_distribution = std::uniform_real_distribution<float>(-0.5 * this->period, 0.5 * this->period);
+	void setSpawnRate(int rate){
+		this->spawn_period = 60 / rate;
 	}
 
 	void setSpawnConfig(AgentSpawnConfig config){
 		this->config = config;
+	} 
+
+	void Update() override {
+		this->time_until_next_spawn -= this->DeltaTime();
+		if(this->time_until_next_spawn <= 0){
+			this->spawnAgent();
+			this->time_until_next_spawn = this->spawn_period + getRandomFloatNormalDistribution(0, this->spawn_period/4);
+		}
 	}
 
-	AgentSpawner<T>(Core* core, std::shared_ptr<Light> light, std::shared_ptr<Crossing> crossing) : core(core), light(light), crossing(crossing){
-		std::random_device rd;
-		std::mt19937 gen(rd());
-
-		this->generator = gen;
-	}
-	
+	void Start() override {}
 };
 
 class SimulationNode {

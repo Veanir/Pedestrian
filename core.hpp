@@ -27,7 +27,10 @@ class CoreObject
 	  this->time.deltaTime = deltaTime;
 	}
 	void Yeet(){
-	  this->yeet_flag = true;
+		#ifdef DEBUG
+		std::cout << "Yeeting object: " << this << std::endl;
+		#endif
+	 	this->yeet_flag = true;
 	}
 	bool isYeeted(){
 	  return this->yeet_flag;
@@ -61,34 +64,34 @@ class Core
 
 	void Update(float deltaTime){
 		this->time += deltaTime;
-	  for(auto &object:this->objects){
-			if(object == nullptr)
+
+		for (int i = this->objects.size() - 1; i >= 0; i--){
+			if(this->objects[i]->isYeeted()){
+				this->objects.erase(this->objects.begin() + i);
 				continue;
-	    //Yeet object if it wants to
-	    if(object->isYeeted()){
-	      std::swap(this->objects.back(), object);
-	      objects.pop_back();      
-	      return;
-	    }
-	    //Update object
-	    object->FixedUpdate(deltaTime);
-	    object->Update();
+			}
+			this->objects[i]->FixedUpdate(deltaTime);
+			this->objects[i]->Update();
+
 		}
 	}
 
-	template<typename T, typename... Args>
-	std::shared_ptr<T> Instantiate(Args... args){
-		auto sharedPointer = std::make_shared<T>(std::forward<Args>(args)...);
-		this->objects.push_back(sharedPointer);
-	  (*objects.back()).Start();
 
-	  return sharedPointer;
+	template <typename T, typename... Args>
+	std::shared_ptr<T> Instantiate(Args&&... args){
+		auto object = std::make_shared<T>(std::forward<Args>(args)...);
+		this->objects.push_back(object);
+		object->Start();
+		return object;
 	}
 
 	float getTime(){
 		return this->time;
 	}
 
+	Core(){
+		this->time = 0;
+	}
 };
 
 

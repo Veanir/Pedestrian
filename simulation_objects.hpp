@@ -1,6 +1,9 @@
 #pragma once
 
 #include "core.hpp"
+#include <memory>
+#include <random>
+#include <vector>
 
 enum LightColor {
 	YellowGreen,
@@ -31,14 +34,18 @@ class Light : public SimulationObject {
 	LightColor color;
 	float time_until_next_change;
 	void changeColor();
+
 	float getWaitingTime();
+
 	public:
 	void Update() override;
+
 	void Start() override;
 
 	void printLightConfig();
 
 	LightColor getColor();
+
 	Light(LightConfig config);
 };
 
@@ -55,6 +62,8 @@ class AgentConfig {
 	float reflex;
 	float impatience_time;
 	float rush_ratio;
+
+	AgentConfig();
 };
 
 class Crossing;
@@ -62,6 +71,8 @@ class Crossing;
 class Agent : public SimulationObject, public std::enable_shared_from_this<Agent>  {
 	private:
 	State state;
+
+	virtual void printAction();
 
 	protected:
 	std::shared_ptr<Light> light;
@@ -72,6 +83,7 @@ class Agent : public SimulationObject, public std::enable_shared_from_this<Agent
 
 	public:
 	float getWaitingTime();
+
 	void changeState();
 
 	State getState();
@@ -86,7 +98,10 @@ class Agent : public SimulationObject, public std::enable_shared_from_this<Agent
 class Pedestrian : public Agent {
 	public:
 	void Update() override;
+
 	void Start() override;
+
+	void printAction() override;
 
 	Pedestrian(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
@@ -96,8 +111,11 @@ class Car : public Agent {
 	void Update() override;
 	void Start() override;
 
+	void printAction() override;
+
 	Car(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : Agent(config, crossing, light) {}
 };
+
 
 class CrossingScore{
 	public:
@@ -110,14 +128,13 @@ class CrossingScore{
 
 class Crossing: public SimulationObject{
 	private:
-	std::vector<std::shared_ptr<Agent>> agents;
+	std::vector<Agent*> agents;
 
 	float length;
 
 	CrossingScore score;
 
 	void Crash();
-
 	public:
 	void Update() override;
 	void Start() override;
@@ -127,9 +144,11 @@ class Crossing: public SimulationObject{
 	float getLength();
 
 	template<typename T>
-	void hookAgent(std::shared_ptr<T> agent);
+	void hookAgent(T* agent);
 
 	void addWaitingTime(float waiting_time);
 
 	Crossing(float length);
 };
+
+#include "simulation_objects_impl.hpp"

@@ -1,3 +1,4 @@
+#pragma once
 #include "simulation_objects.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -30,7 +31,7 @@ LightConfig::LightConfig(){
   std::uniform_int_distribution<int> color_distribution(0, 3);
 	std::uniform_real_distribution<float> time_distribution(0.0, 180.0);
 
-  this->initial_color =static_cast<LightColor>(color_distribution(engine));
+  this->initial_color = static_cast<LightColor>(color_distribution(engine));
 	this->green_time = time_distribution(engine);
 	this->yellow_green_time = time_distribution(engine);
 	this->red_time = time_distribution(engine);
@@ -45,6 +46,7 @@ LightColor Light::getColor(){
 Light::Light(LightConfig config){
 	this->config = config;
 	this->color = config.initial_color;
+	this->time_until_next_change = this->getWaitingTime();
 }
 
 void Light::changeColor(){
@@ -77,6 +79,7 @@ void Light::printLightConfig(){
 }
 
 void Light::Start(){
+	std::cout << "Light [" << this << "] started" << std::endl;
 	//blank, but needs to be implemented
 }
 
@@ -86,23 +89,31 @@ void Light::Update(){
 	if(this->time_until_next_change <= 0){
 		this->changeColor();
 		this->time_until_next_change = this->getWaitingTime();
+		std::cout << "Light [" << this << "] zmienil kolor na -> " << this->color << std::endl;
 	}
 }
 
 //Agent
 
-bool trigger(float probability){
-	std::random_device rd;
-	std::mt19937 gen(rd());
+AgentConfig::AgentConfig(){
+	this->speed = 5;
+	this->impatience_time = 60;
+	this->reflex = 1;
+	this->rush_ratio = 0.1;
+}
 
-	std::bernoulli_distribution dis(probability);
-	return dis(gen);
+bool trigger(float probability){
+	//TODO IMPLEMENT THIS SHIT
+	return false;
 }
 
 float Agent::getWaitingTime(){
 	return this->waiting_time;
 }
 
+void Agent::printAction(){
+	std::cout << "Agent [" << this << "] zmienil stan na -> " <<  this->getState() << std::endl;
+}
 void Agent::changeState(){
 	switch(static_cast<int>(this->state))
 	{
@@ -110,12 +121,18 @@ void Agent::changeState(){
 			if(this->config.impatience_time <= 0){
 				this->state = State::crossing;
 				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 				return;
 			}
 			
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::reflex;
 				this->time_until_next_change = this->config.reflex;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			else
 				this->time_until_next_change = 0;
@@ -124,14 +141,23 @@ void Agent::changeState(){
 			if(this->light->getColor() == LightColor::Green){
 				this->state = State::crossing;
 				this->time_until_next_change = this->crossing->getLength()/this->config.speed;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			else{
 				this->state = State::stationary;
 				this->time_until_next_change = 0;
+				#ifdef DEBUG
+				this->printAction();
+				#endif
 			}
 			break;
 		case State::crossing:
 			this->state = State::crossed;
+			#ifdef DEBUG
+			this->printAction();
+			#endif
 			break;
 		case State::crossed:
 			this->Yeet();
@@ -153,12 +179,9 @@ void Agent::Start(){
 	//blank for now
 }
 
-Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light){
-	this->config = config;
-	this->crossing = crossing;
-	this->light = light;
-
+Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : config(config), crossing(crossing), light(light){
 	this->state = State::stationary;
+	this->time_until_next_change = 0;
 }
 
 Agent::~Agent(){
@@ -174,9 +197,13 @@ void Pedestrian::Update(){
 }
 
 void Pedestrian::Start(){
-	this->crossing->hookAgent(shared_from_this());
+	this->crossing->hookAgent(this);
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
+}
+
+void Pedestrian::printAction(){
+	std::cout << "Pedestrian [" << this << "] zmienil stan ma -> " <<  this->getState() << std::endl;
 }
 
 //Car
@@ -189,25 +216,30 @@ void Car::Update(){
 }
 
 void Car::Start(){
-	this->crossing->hookAgent(shared_from_this());
+	this->crossing->hookAgent(this);
 	if(trigger(this->config.rush_ratio))
 		this->config.impatience_time = 0;
+}
+
+void Car::printAction(){
+	std::cout << "Car [" << this << "] zmienil stan na -> " <<  this->getState() << std::endl;
 }
 
 //Crossing
 void Crossing::Update(){
 	bool car_crossing = false;
 	bool pedestrian_crossing = false;
-	for(auto &agent:this->agents){
-		if(agent->isYeeted()){
-			std::swap(this->agents.back(),agent);
-			agents.pop_back();
+	for (int i = this->agents.size() - 1; i >= 0; i--){
+		if(this->agents[i]->isYeeted()){
+			this->agents.erase(this->agents.begin() + i);
 			continue;
-			}
+		}
+	}
+	for(auto &agent:this->agents){
 		if(agent->getState() != State::crossing){
 			continue;
 			}
-		if(std::dynamic_pointer_cast<Pedestrian>(agent))
+		if(dynamic_cast<Pedestrian*>(agent))
 			pedestrian_crossing = true;
 		else
 			car_crossing = true;
@@ -225,11 +257,15 @@ void Crossing::Start(){
 void Crossing::Crash(){
 	this->score.accident_count++;
 	for(auto &agent: this->agents){
-		if(std::dynamic_pointer_cast<Pedestrian>(agent) && agent->getState() == State::crossing){
+		if(dynamic_cast<Pedestrian*>(agent) && agent->getState() == State::crossing){
 			this->score.casualties_count++;
 			agent->Yeet();
 		}
 	}
+
+	#ifdef DEBUG
+	std::cout << "Crossing [" << this << "] zderzenie" << std::endl;
+	#endif
 }
 
 float Crossing::getLength(){
@@ -237,7 +273,7 @@ float Crossing::getLength(){
 }
 
 template<typename T>
-void Crossing::hookAgent(std::shared_ptr<T> agent){ 
+void Crossing::hookAgent(T* agent){ 
 	this->agents.push_back(agent);
 }
 
