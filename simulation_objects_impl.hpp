@@ -31,7 +31,7 @@ LightConfig::LightConfig(){
   std::uniform_int_distribution<int> color_distribution(0, 3);
 	std::uniform_real_distribution<float> time_distribution(0.0, 180.0);
 
-  this->initial_color =static_cast<LightColor>(color_distribution(engine));
+  this->initial_color = static_cast<LightColor>(color_distribution(engine));
 	this->green_time = time_distribution(engine);
 	this->yellow_green_time = time_distribution(engine);
 	this->red_time = time_distribution(engine);
