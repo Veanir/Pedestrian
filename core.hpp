@@ -49,6 +49,10 @@ class SimulationObject : public CoreObject {
 	public:
 	virtual void Update() = 0;
 	virtual void Start() = 0;
+
+	~SimulationObject(){
+		std::cout << "SimulationObject destroyed" << std::endl;
+	}
 };
 
 class Core
@@ -61,16 +65,15 @@ class Core
 
 	void Update(float deltaTime){
 		this->time += deltaTime;
-	  for(auto &object:this->objects){
-	    //Yeet object if it wants to
-	    if(object.get() == nullptr || object->isYeeted()){
-	      std::swap(this->objects.back(), object);
-	      objects.pop_back();      
-	      return;
-	    }
-	    //Update object
-	    object->FixedUpdate(deltaTime);
-	    object->Update();
+
+		for (int i = this->objects.size() - 1; i >= 0; i--){
+			if(this->objects[i]->isYeeted()){
+				this->objects.erase(this->objects.begin() + i);
+				continue;
+			}
+			this->objects[i]->FixedUpdate(deltaTime);
+			this->objects[i]->Update();
+
 		}
 	}
 

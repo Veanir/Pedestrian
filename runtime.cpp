@@ -18,7 +18,7 @@ int main() {
   spawner->setSpawnRate(20);
 
 
-  for(int i = 0; i < 2; i++){
+  for(int i = 0; i < 2 * 3600; i++){
     core.Update(0.5f);
   }
 

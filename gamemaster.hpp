@@ -93,7 +93,12 @@ class AgentSpawner : public SimulationObject {
 		//}
 	}
 
-	void Start() override {}
+	void Start() override {
+		//this->spawnAgent();
+		//this->spawnAgent();
+		//this->spawnAgent();
+		//this->spawnAgent();
+	}
 };
 
 class SimulationNode {
