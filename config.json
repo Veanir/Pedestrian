@@ -1,0 +1,22 @@
+{
+    "pedestrian_config" : {
+        "speed_min" : 1.0,
+        "speed_max" : 5.0,
+        "reflex_min" : 0.5,
+        "reflex_max" : 3.0,
+        "impatience_time_min" : 30,
+        "impatience_time_max" : 120,
+        "rush_ratio_min" : 0.1,
+        "rush_ratio_max" : 0.3
+    },
+    "car_config" : {
+        "speed_min" : 10.0,
+        "speed_max" : 20.0,
+        "reflex_min" : 1.0,
+        "reflex_max" : 5.0,
+        "impatience_time_min" : 120,
+        "impatience_time_max" : 360,
+        "rush_ratio_min" : 0.0,
+        "rush_ratio_max" : 0.1
+    }
+}

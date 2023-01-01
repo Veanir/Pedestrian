@@ -1,45 +1,46 @@
-#define DEBUG
+//#define DEBUG
 
 #include "simulation_objects.hpp"
 #include "core.hpp"
 #include "gamemaster.hpp"
+#include "utility.hpp"
+
 #include <iostream>
 #include <memory>
 #include <utility>
 
+#include <json.hpp>
+#include <fstream>
+
 int main() {
-  
-  //SimulationNode node;
 
-  //node.Simulate(8, 5, 20, 5);
+  std::ifstream config_file("config.json");
+  if(!config_file.is_open()){
+    std::cerr << "Could not open config file" << std::endl;
+    return 1;
+  }
 
-  Core core;
+  nlohmann::json config_data;
+  config_file >> config_data;
 
-  LightConfig config;
+  SimulationMaster master;
+  master.population_size = 1000;
 
-  config.green_time = 10;
-  config.yellow_green_time = 5;
-  config.red_time = 10;
-  config.yellow_red_time = 5;
-  config.initial_color = LightColor::YellowGreen;
+  master.pedestrian_config = parseSpawnConfig(config_data["pedestrian_config"]);
+  master.car_config = parseSpawnConfig(config_data["car_config"]);
 
-  LightConfig config2 = config;
-  config2.initial_color = LightColor::YellowGreen;
-
-  auto light = core.Instantiate<Light>(config);
-  auto light2 = core.Instantiate<Light>(config2);
-
-  auto crossing = core.Instantiate<Crossing>(5);
-
-  auto spawner = core.Instantiate<AgentSpawner<Pedestrian>>(&core, light, crossing);
-  spawner->setSpawnRate(20);
-  auto spawner2 = core.Instantiate<AgentSpawner<Car>>(&core, light2, crossing);
-  spawner2->setSpawnRate(5);
+  master.AddNodesInitial();
 
   for(int i = 0; i < 100; i++){
-    core.Update(0.5f);
-    if((int)core.getTime() % 3 == 0)
-      std::cout << "time -> " << core.getTime()<< std::endl;
+    master.Simulate(0.5, 5, 20, 4);
+
+    std::cout << "Generation: " << i << std::endl;
+
+    master.SortByScore();
+    master.TakeBestPercent(0.2);
+    master.printNodes();
+    master.FillRestWithBest();
+    master.MutateNodes(0.2);
   }
 
   return 1;

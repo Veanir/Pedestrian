@@ -4,24 +4,23 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <ctime>
 
  
 //Light Config
 
-void mutate(float *x, float ratio){
+float mutateFloat(float x, float ratio){
 	std::random_device rd;
 	std::mt19937 engine(rd());
-
-	std::uniform_real_distribution<float> dis(-1.0, 1.0);
-	*x += *x * ratio * dis(engine);
-	*x = *x > 0 ? *x : 0;
+	float deviation = x * ratio;
+	std::uniform_real_distribution<float> distribution(-deviation, deviation);
+	return x + distribution(engine);
 }
-void LightConfig::Mutate(){
-
-	mutate(&this->green_time, this->mutation_ratio);
-	mutate(&this->red_time, this->mutation_ratio);
-	mutate(&this->yellow_green_time, this->mutation_ratio);
-	mutate(&this->yellow_red_time, this->mutation_ratio);
+void LightConfig::Mutate(float mutation_ratio){
+	this->green_time = mutateFloat(this->green_time, mutation_ratio);
+	this->yellow_green_time = mutateFloat(this->yellow_green_time, mutation_ratio);
+	this->red_time = mutateFloat(this->red_time, mutation_ratio);
+	this->yellow_red_time = mutateFloat(this->yellow_red_time, mutation_ratio);
 }
 
 LightConfig::LightConfig(){
@@ -36,6 +35,13 @@ LightConfig::LightConfig(){
 	this->yellow_green_time = time_distribution(engine);
 	this->red_time = time_distribution(engine);
 	this->yellow_red_time = time_distribution(engine);
+}
+
+void LightConfig::print(){
+	std::cout << this->yellow_green_time << " | ";
+	std::cout << this->green_time << " | ";
+	std::cout << this->yellow_red_time << " | ";
+	std::cout << this->red_time << std::endl;
 }
 
 //Light
@@ -55,6 +61,7 @@ void Light::changeColor(){
 	else
 		this->color = static_cast<LightColor>(this->color + 1);
 }
+
 
 float Light::getWaitingTime(){
 	switch(this->getColor()){
@@ -79,7 +86,6 @@ void Light::printLightConfig(){
 }
 
 void Light::Start(){
-	std::cout << "Light [" << this << "] started" << std::endl;
 	//blank, but needs to be implemented
 }
 
@@ -89,22 +95,29 @@ void Light::Update(){
 	if(this->time_until_next_change <= 0){
 		this->changeColor();
 		this->time_until_next_change = this->getWaitingTime();
+		#ifdef DEBUG
 		std::cout << "Light [" << this << "] zmienil kolor na -> " << this->color << std::endl;
+		#endif
 	}
 }
 
 //Agent
 
 AgentConfig::AgentConfig(){
-	this->speed = 5;
+	this->speed = 1;
 	this->impatience_time = 60;
 	this->reflex = 1;
-	this->rush_ratio = 0.1;
+	this->rush_ratio = 0;
 }
 
+//Function that returns true with probability of x
 bool trigger(float probability){
-	//TODO IMPLEMENT THIS SHIT
-	return false;
+	std::random_device rd;
+	std::mt19937 engine(rd());
+
+	std::uniform_real_distribution<float> dis(0.0, 1.0);
+	float x = dis(engine);
+	return x < probability;
 }
 
 float Agent::getWaitingTime(){
@@ -182,6 +195,7 @@ void Agent::Start(){
 Agent::Agent(AgentConfig config, std::shared_ptr<Crossing> crossing, std::shared_ptr<Light> light) : config(config), crossing(crossing), light(light){
 	this->state = State::stationary;
 	this->time_until_next_change = 0;
+	this->waiting_time = 0;
 }
 
 Agent::~Agent(){
@@ -248,6 +262,7 @@ void Crossing::Update(){
 			break;
 		}
 	}
+
 }
 
 void Crossing::Start(){
@@ -256,6 +271,7 @@ void Crossing::Start(){
 
 void Crossing::Crash(){
 	this->score.accident_count++;
+
 	for(auto &agent: this->agents){
 		if(dynamic_cast<Pedestrian*>(agent) && agent->getState() == State::crossing){
 			this->score.casualties_count++;
@@ -285,12 +301,19 @@ CrossingScore Crossing::getScore(){
 	return this->score;
 }
 
-float CrossingScore::Score(){
-	return (this->waiting_time/1000) * accident_count;
-}
 
 Crossing::Crossing(float length){
 	this->length = length;
+}
+
+float CrossingScore::Score(){
+	return (this->waiting_time/1000) * (accident_count + 1);
+}
+
+CrossingScore::CrossingScore(){
+	this->waiting_time = 0;
+	this->accident_count = 0;
+	this->casualties_count = 0;
 }
 
 

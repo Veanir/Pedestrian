@@ -6,6 +6,9 @@
 #include <cmath>
 #include <random>
 #include <iostream>
+#include <algorithm>
+#include <thread>
+#include <string>
 
 class AgentSpawnConfig{
 	public:
@@ -27,6 +30,13 @@ class AgentSpawnConfig{
 		this->reflex_max = 4;
 		this->rush_ratio_min = 0.1;
 		this->rush_ratio_max = 0.5;
+	}
+
+	void print(){
+		std::cout << "Speed: " << this->speed_min << " - " << this->speed_max << std::endl;
+		std::cout << "Reflex: " << this->reflex_min << " - " << this->reflex_max << std::endl;
+		std::cout << "Impatience: " << this->impatience_time_min << " - " << this->impatience_time_max << std::endl;
+		std::cout << "Rush: " << this->rush_ratio_min << " - " << this->rush_ratio_max << std::endl;
 	}
 };
 
@@ -79,6 +89,7 @@ class AgentSpawner : public SimulationObject {
 	AgentSpawner(Core *core, std::shared_ptr<Light> light, std::shared_ptr<Crossing> crossing) : core(core), light(light), crossing(crossing){
 		this->spawn_period = 1;
 		this->time_until_next_spawn = 0;
+		this->spawn_count = 0;
 	}
 
 	void setSpawnRate(int rate){
@@ -130,6 +141,88 @@ class SimulationNode {
 			core.Update(0.5f);
 
 		this->Score = crossing->getScore();
-		std::cout << this->Score.Score() << std::endl;
 	}
+};
+
+void test(){
+	std::cout << "Test" << std::endl;
+}
+
+class SimulationMaster {
+	public:
+	std::vector<SimulationNode> nodes;
+	std::vector<std::thread> threads;
+
+
+	AgentSpawnConfig pedestrian_config;
+	AgentSpawnConfig car_config;
+
+	int population_size;
+
+	void Simulate(float time, float length, int pedestrian_rate, int car_rate){
+		for(auto &node : nodes){
+			node.pedestrian_config = this->pedestrian_config;
+			node.car_config = this->car_config;
+			this->threads.push_back(std::thread(&SimulationNode::Simulate, &node, time, length, pedestrian_rate, car_rate));
+		}
+		for(auto &thread : threads){
+			thread.join();
+		}
+		this->threads.clear();
+	}
+
+	void AddNode(LightConfig pedestrian_light, LightConfig car_light){
+		SimulationNode node;
+		node.pedestrian_light = pedestrian_light;
+		node.car_light = car_light;
+
+		this->nodes.push_back(node);
+	}
+
+	void AddNodesInitial(){
+		for(int i = 0; i < this->population_size; i++){
+			this->AddNode(LightConfig(), LightConfig());
+		}
+	}
+
+	SimulationMaster(){
+		this->population_size = 10;
+	}
+
+	SimulationMaster(int population_size){
+		this->population_size = population_size;
+	}
+
+	void SortByScore(){
+		std::sort(this->nodes.begin(), this->nodes.end(), [](SimulationNode &a, SimulationNode &b){
+			return a.Score.Score() < b.Score.Score();
+		});
+	}
+
+	void TakeBestPercent(float percent){
+		int count = this->nodes.size() * percent;
+		this->nodes.erase(this->nodes.begin() + count, this->nodes.end());
+	}
+
+	void FillRestWithBest(){
+		int count = this->nodes.size();
+		for(int i = 0; i < this->population_size - count; i++){
+			this->nodes.push_back(this->nodes[i % count]);
+		}
+	}
+
+	void MutateNodes(float mutation_rate){
+		for(auto &node : this->nodes){
+			node.pedestrian_light.Mutate(mutation_rate);
+			node.car_light.Mutate(mutation_rate);
+		}
+	}
+
+	void printNodes(){
+		std::cout << "Nodes: " << this->nodes.size() << std::endl;
+		for(auto &node : this->nodes){
+			std::cout << "Score: " << node.Score.Score() << std::endl;
+		}
+	}
+
 };

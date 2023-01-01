@@ -14,8 +14,6 @@ enum LightColor {
 
 class LightConfig{
 	public:
-	float mutation_ratio;
-
 	float yellow_green_time;
 	float green_time;
 	float yellow_red_time;
@@ -23,7 +21,9 @@ class LightConfig{
 
 	LightColor initial_color;
 
-	void Mutate();
+	void Mutate(float mutation_ratio);
+
+	void print();
 
 	LightConfig();
 };
@@ -124,6 +124,7 @@ class CrossingScore{
 	int casualties_count;
 
 	float Score();
+	CrossingScore();
 };
 
 class Crossing: public SimulationObject{
