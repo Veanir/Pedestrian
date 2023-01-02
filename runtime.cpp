@@ -16,26 +16,24 @@ int main() {
 
   SimulationNode node;
 
-  node.Simulate(8, 5, 20, 4);
+  std::ifstream config_file("config.json");
+  if(!config_file.is_open()){
+    std::cerr << "Could not open config file" << std::endl;
+    return 1;
+  }
 
-  //std::ifstream config_file("config.json");
-  //if(!config_file.is_open()){
-    //std::cerr << "Could not open config file" << std::endl;
-    //return 1;
-  //}
+  nlohmann::json config_data;
+  config_file >> config_data;
 
-  //nlohmann::json config_data;
-  //config_file >> config_data;
+  SimulationMaster master;
 
-  //SimulationMaster master;
+  master.pedestrian_config = parseSpawnConfig(config_data["pedestrian_config"]);
+  master.car_config = parseSpawnConfig(config_data["car_config"]);
+  master.parseConfig(config_data["simulation_config"]);
 
-  //master.pedestrian_config = parseSpawnConfig(config_data["pedestrian_config"]);
-  //master.car_config = parseSpawnConfig(config_data["car_config"]);
-  //master.parseConfig(config_data["simulation_config"]);
+  master.AddNodesInitial();
 
-  //master.AddNodesInitial();
-
-  //master.Simulate();
+  master.Simulate();
 
   return 1;
 }

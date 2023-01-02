@@ -16,11 +16,22 @@ float mutateFloat(float x, float ratio){
 	std::uniform_real_distribution<float> distribution(-deviation, deviation);
 	return x + distribution(engine);
 }
+
+LightColor mutateColor(LightColor color, float ratio){
+	std::random_device rd;
+	std::mt19937 engine(rd());
+	std::uniform_real_distribution<float> distribution(0.0, 1.0);
+	if(distribution(engine) < ratio){
+		return static_cast<LightColor>(rand() % 4);
+	}
+	return color;
+}
 void LightConfig::Mutate(float mutation_ratio){
 	this->green_time = mutateFloat(this->green_time, mutation_ratio);
 	this->yellow_green_time = mutateFloat(this->yellow_green_time, mutation_ratio);
 	this->red_time = mutateFloat(this->red_time, mutation_ratio);
 	this->yellow_red_time = mutateFloat(this->yellow_red_time, mutation_ratio);
+	this->initial_color = mutateColor(this->initial_color, mutation_ratio);
 }
 
 nlohmann::json LightConfig::to_json(){
@@ -317,7 +328,7 @@ Crossing::Crossing(float length){
 }
 
 float CrossingScore::Score(){
-	return (this->waiting_time/1000) * (accident_count + 1);
+	return (this->waiting_time/1000) * (accident_count * 1000 + 1);
 }
 
 CrossingScore::CrossingScore(){

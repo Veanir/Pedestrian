@@ -13,6 +13,7 @@
 #include <string>
 #include <fstream>
 #include <json.hpp>
+#include <unistd.h>
 
 class AgentSpawnConfig{
 	public:
@@ -174,18 +175,41 @@ class SimulationNode {
 class SimulationMasterConfig {
 	public:
 	int population_size;
+	int population_size_initial;
 	int iterations;
 	float mutation_rate_initial;
 	float mutation_rate_final;
-	float best_percent;
+	float best_percent_initial;
+	float best_percent_final;
 
 	int pedestrian_rate;
 	int car_rate;
 	float time;
 	float length;
+
+	int threads;
+};
+
+class SimulationScore{
+	public:
+	float score_best;
+	float score_average;
+	float score_average_best_percent;
+	SimulationNode best_node;
 };
 
 class SimulationMaster {
+	private:
+	int thread_count;
+	SimulationScore score;
+
+	void joinThreads(){
+		for(auto& thread : this->threads)
+			thread.join();
+		this->threads.clear();
+		this->thread_count = 0;
+	}
+
 	public:
 	std::string fileName;
 
@@ -200,48 +224,74 @@ class SimulationMaster {
 
 	void parseConfig(const nlohmann::json& config){
 		this->config.population_size = config["population_size"];
+		this->config.population_size_initial = config["population_size_initial"];
 		this->config.iterations = config["iterations"];
 		this->config.mutation_rate_initial = config["mutation_rate_initial"];
 		this->config.mutation_rate_final = config["mutation_rate_final"];
-		this->config.best_percent = config["best_percent"];
+		this->config.best_percent_initial = config["best_percent_initial"];
+		this->config.best_percent_final = config["best_percent_final"];
 
 		this->config.pedestrian_rate = config["pedestrian_rate"];
 		this->config.car_rate = config["car_rate"];
 		this->config.time = config["time"];
 		this->config.length = config["length"];
+		if(config["threads"] != -1)
+			this->config.threads = config["threads"];
 	}
 
 	void Simulate(){
+		std::cout << "Number of threads -> " << this->config.threads << std::endl;
+
 		for(int i = 0; i < this->config.iterations; i++){
-			std::cout << "Iteration " << i << "/" << this->config.iterations << std::endl;
+			std::cout << "Iteration " << i << "/" << this->config.iterations;
+			std::cout << " |m_rate: " << sigmoidal_progress(i, this->config.iterations, this->config.mutation_rate_initial, this->config.mutation_rate_final);
+			std::cout << " |b_percent: " << sigmoidal_progress(i, this->config.iterations, this->config.best_percent_initial, this->config.best_percent_final) << std::endl;
 			for(auto &node : nodes){
 				node.pedestrian_config = this->pedestrian_config;
 				node.car_config = this->car_config;
 				this->threads.push_back(std::thread(&SimulationNode::Simulate, &node, this->config.time, this->config.length, this->config.pedestrian_rate, this->config.car_rate));
-			}
-			for(auto &thread : threads){
-				thread.join();
-			}
-			this->threads.clear();
 
-			this->ManageResults();
+				this->thread_count++;
+				if(this->thread_count >= this->config.threads)
+					this->joinThreads();
+			}
 
-			this->MutateNodes(this->sigmoidal_mutation_rate(i));
+			this->joinThreads();
+
+			this->SortByScore();
+			if(this->score.best_node.Score.Score() == 0 || this->score.best_node.Score.Score() > this->nodes[0].Score.Score())
+				this->score.best_node = this->nodes[0];
+			this->score.score_best = this->getBestScore();
+			this->score.score_average = this->getAverageScore();
+			this->TakeBestPercent(this->sigmoidal_progress(i, this->config.iterations, this->config.best_percent_initial, this->config.best_percent_final));
+			this->score.score_average_best_percent = this->getAverageScore();
+			this->FillRestWithBest();
+			this->MutateNodes(this->sigmoidal_progress(i, this->config.iterations, this->config.mutation_rate_initial, this->config.mutation_rate_final));
+
+			this->SaveResults();
 
 		}
 	}
 
-	double sigmoidal_mutation_rate(int iteration){
-		double x = (double)iteration / this->config.iterations;
-    	return this->config.mutation_rate_final + (this->config.mutation_rate_initial - this->config.mutation_rate_final) / (1 + exp(-4 * x + 2));
+	double sigmoidal_progress(int iteration, int max_iterations, double initial_rate, double final_rate) {
+    	double x = (double)(max_iterations - iteration) / max_iterations;
+    	return final_rate + (initial_rate - final_rate) / (1 + exp(-4 * x + 2));
 	}
 
-	//Manage Simulation Nodes and save results to file as json
-	void ManageResults(){
-		//#Manage Results
-		this->SortByScore(); //Sort by score
-		this->TakeBestPercent(this->config.best_percent); //Take best percent
-		this->FillRestWithBest();
+	void SaveResults(){
+		std::ifstream in(this->fileName);
+		nlohmann::json json;
+		in >> json;
+		in.close();
+
+		json["score_best"].push_back(this->score.score_best);
+		json["score_avg"].push_back(this->score.score_average);
+		json["score_avg_best_percent"].push_back(this->score.score_average_best_percent);
+		json["best_node"] = this->score.best_node.to_json();
+
+		std::ofstream out(this->fileName);
+		out << json.dump(4);
+		out.close();
 	}
 
 	void AddNode(LightConfig pedestrian_light, LightConfig car_light){
@@ -267,13 +317,14 @@ class SimulationMaster {
 	}
 
 	void AddNodesInitial(){
-		for(int i = 0; i < this->config.population_size; i++){
+		for(int i = 0; i < this->config.population_size_initial; i++){
 			this->AddNode(LightConfig(), LightConfig());
 		}
 	}
 
 	SimulationMaster(){
 		this->config.population_size = 10;
+		this->config.threads = std::thread::hardware_concurrency() == 0 ? 1 : std::thread::hardware_concurrency();
 		this->fileName = "simulation_results.json";
 
 		this->InitResultFile();
@@ -281,6 +332,7 @@ class SimulationMaster {
 
 	SimulationMaster(int population_size){
 		this->config.population_size = population_size;
+		this->config.threads = std::thread::hardware_concurrency() == 0 ? 1 : std::thread::hardware_concurrency();
 		this->fileName = "simulation_results.json";
 
 		this->InitResultFile();
@@ -293,7 +345,7 @@ class SimulationMaster {
 		json["score_best"] = nlohmann::json::array();
 		json["score_avg"] = nlohmann::json::array();
 		json["score_avg_best_percent"] = nlohmann::json::array();
-		json["best_node"] = SimulationNode().to_json();
+		json["best_node"] = NULL;
 		file << json;
 		file.close();
 	}

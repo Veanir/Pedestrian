@@ -6,8 +6,8 @@
         "reflex_max" : 3.0,
         "impatience_time_min" : 30,
         "impatience_time_max" : 120,
-        "rush_ratio_min" : 0.1,
-        "rush_ratio_max" : 0.3
+        "rush_ratio_min" : 0.0,
+        "rush_ratio_max" : 0.0
     },
     "car_config" : {
         "speed_min" : 10.0,
@@ -17,17 +17,20 @@
         "impatience_time_min" : 120,
         "impatience_time_max" : 360,
         "rush_ratio_min" : 0.0,
-        "rush_ratio_max" : 0.1
+        "rush_ratio_max" : 0.0
     },
     "simulation_config" : {
-        "population_size" : 20,
+        "population_size_initial" : 10000,
+        "population_size" : 1000,
         "iterations" : 100,
         "mutation_rate_initial" : 0.3,
         "mutation_rate_final" : 0.01,
-        "best_percent" : 0.3,
-        "pedestrian_rate" : 20,
-        "car_rate" : 4,
+        "best_percent_initial" : 0.3,
+        "best_percent_final" : 0.1,
+        "pedestrian_rate" : 40,
+        "car_rate" : 20,
         "time" : 0.5,
-        "length" : 5.0
+        "length" : 5.0,
+        "threads" : -1
     }
 }
