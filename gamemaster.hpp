@@ -5,10 +5,14 @@
 
 #include <cmath>
 #include <random>
-#include <iostream>
+
 #include <algorithm>
 #include <thread>
+
+#include <iostream>
 #include <string>
+#include <fstream>
+#include <json.hpp>
 
 class AgentSpawnConfig{
 	public:
@@ -38,9 +42,21 @@ class AgentSpawnConfig{
 		std::cout << "Impatience: " << this->impatience_time_min << " - " << this->impatience_time_max << std::endl;
 		std::cout << "Rush: " << this->rush_ratio_min << " - " << this->rush_ratio_max << std::endl;
 	}
+
+	nlohmann::json to_json(){
+		nlohmann::json json;
+		json["speed_min"] = this->speed_min;
+		json["speed_max"] = this->speed_max;
+		json["reflex_min"] = this->reflex_min;
+		json["reflex_max"] = this->reflex_max;
+		json["impatience_time_min"] = this->impatience_time_min;
+		json["impatience_time_max"] = this->impatience_time_max;
+		json["rush_ratio_min"] = this->rush_ratio_min;
+		json["rush_ratio_max"] = this->rush_ratio_max;
+		return json;
+	}
+
 };
-
-
 
 template <typename T>
 class AgentSpawner : public SimulationObject {
@@ -142,14 +158,37 @@ class SimulationNode {
 
 		this->Score = crossing->getScore();
 	}
+
+	nlohmann::json to_json(){
+		nlohmann::json json;
+		json["pedestrian_light"] = this->pedestrian_light.to_json();
+		json["car_light"] = this->car_light.to_json();
+		json["pedestrian_config"] = this->pedestrian_config.to_json();
+		json["car_config"] = this->car_config.to_json();
+		json["score"] = this->Score.to_json();
+		return json;
+	}
+
 };
 
-void test(){
-	std::cout << "Test" << std::endl;
-}
+class SimulationMasterConfig {
+	public:
+	int population_size;
+	int iterations;
+	float mutation_rate_initial;
+	float mutation_rate_final;
+	float best_percent;
+
+	int pedestrian_rate;
+	int car_rate;
+	float time;
+	float length;
+};
 
 class SimulationMaster {
 	public:
+	std::string fileName;
+
 	std::vector<SimulationNode> nodes;
 	std::vector<std::thread> threads;
 
@@ -157,18 +196,52 @@ class SimulationMaster {
 	AgentSpawnConfig pedestrian_config;
 	AgentSpawnConfig car_config;
 
-	int population_size;
+	SimulationMasterConfig config;
 
-	void Simulate(float time, float length, int pedestrian_rate, int car_rate){
-		for(auto &node : nodes){
-			node.pedestrian_config = this->pedestrian_config;
-			node.car_config = this->car_config;
-			this->threads.push_back(std::thread(&SimulationNode::Simulate, &node, time, length, pedestrian_rate, car_rate));
+	void parseConfig(const nlohmann::json& config){
+		this->config.population_size = config["population_size"];
+		this->config.iterations = config["iterations"];
+		this->config.mutation_rate_initial = config["mutation_rate_initial"];
+		this->config.mutation_rate_final = config["mutation_rate_final"];
+		this->config.best_percent = config["best_percent"];
+
+		this->config.pedestrian_rate = config["pedestrian_rate"];
+		this->config.car_rate = config["car_rate"];
+		this->config.time = config["time"];
+		this->config.length = config["length"];
+	}
+
+	void Simulate(){
+		for(int i = 0; i < this->config.iterations; i++){
+			std::cout << "Iteration " << i << "/" << this->config.iterations << std::endl;
+			for(auto &node : nodes){
+				node.pedestrian_config = this->pedestrian_config;
+				node.car_config = this->car_config;
+				this->threads.push_back(std::thread(&SimulationNode::Simulate, &node, this->config.time, this->config.length, this->config.pedestrian_rate, this->config.car_rate));
+			}
+			for(auto &thread : threads){
+				thread.join();
+			}
+			this->threads.clear();
+
+			this->ManageResults();
+
+			this->MutateNodes(this->sigmoidal_mutation_rate(i));
+
 		}
-		for(auto &thread : threads){
-			thread.join();
-		}
-		this->threads.clear();
+	}
+
+	double sigmoidal_mutation_rate(int iteration){
+		double x = (double)iteration / this->config.iterations;
+    	return this->config.mutation_rate_final + (this->config.mutation_rate_initial - this->config.mutation_rate_final) / (1 + exp(-4 * x + 2));
+	}
+
+	//Manage Simulation Nodes and save results to file as json
+	void ManageResults(){
+		//#Manage Results
+		this->SortByScore(); //Sort by score
+		this->TakeBestPercent(this->config.best_percent); //Take best percent
+		this->FillRestWithBest();
 	}
 
 	void AddNode(LightConfig pedestrian_light, LightConfig car_light){
@@ -179,18 +252,50 @@ class SimulationMaster {
 		this->nodes.push_back(node);
 	}
 
+	float getAverageScore(){
+		float sum = 0;
+		for(auto &node : this->nodes){
+			sum += node.Score.Score();
+		}
+		return sum / this->nodes.size();
+	}
+
+	float getBestScore(){
+		if(this->nodes.size() == 0)
+			return 0;
+		return this->nodes[0].Score.Score();
+	}
+
 	void AddNodesInitial(){
-		for(int i = 0; i < this->population_size; i++){
+		for(int i = 0; i < this->config.population_size; i++){
 			this->AddNode(LightConfig(), LightConfig());
 		}
 	}
 
 	SimulationMaster(){
-		this->population_size = 10;
+		this->config.population_size = 10;
+		this->fileName = "simulation_results.json";
+
+		this->InitResultFile();
 	}
 
 	SimulationMaster(int population_size){
-		this->population_size = population_size;
+		this->config.population_size = population_size;
+		this->fileName = "simulation_results.json";
+
+		this->InitResultFile();
+	}
+
+	void InitResultFile(){
+		std::ofstream file(this->fileName, std::ios::out | std::ios::trunc);
+		
+		nlohmann::json json;
+		json["score_best"] = nlohmann::json::array();
+		json["score_avg"] = nlohmann::json::array();
+		json["score_avg_best_percent"] = nlohmann::json::array();
+		json["best_node"] = SimulationNode().to_json();
+		file << json;
+		file.close();
 	}
 
 	void SortByScore(){
@@ -206,7 +311,7 @@ class SimulationMaster {
 
 	void FillRestWithBest(){
 		int count = this->nodes.size();
-		for(int i = 0; i < this->population_size - count; i++){
+		for(int i = 0; i < this->config.population_size - count; i++){
 			this->nodes.push_back(this->nodes[i % count]);
 		}
 	}

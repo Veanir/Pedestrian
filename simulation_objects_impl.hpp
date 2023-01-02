@@ -5,7 +5,7 @@
 #include <memory>
 #include <random>
 #include <ctime>
-
+#include <json.hpp>
  
 //Light Config
 
@@ -21,6 +21,16 @@ void LightConfig::Mutate(float mutation_ratio){
 	this->yellow_green_time = mutateFloat(this->yellow_green_time, mutation_ratio);
 	this->red_time = mutateFloat(this->red_time, mutation_ratio);
 	this->yellow_red_time = mutateFloat(this->yellow_red_time, mutation_ratio);
+}
+
+nlohmann::json LightConfig::to_json(){
+	nlohmann::json json;
+	json["yellow_green_time"] = this->yellow_green_time;
+	json["green_time"] = this->green_time;
+	json["yellow_red_time"] = this->yellow_red_time;
+	json["red_time"] = this->red_time;
+	json["initial_color"] = this->initial_color;
+	return json;
 }
 
 LightConfig::LightConfig(){
@@ -314,6 +324,15 @@ CrossingScore::CrossingScore(){
 	this->waiting_time = 0;
 	this->accident_count = 0;
 	this->casualties_count = 0;
+}
+
+nlohmann::json CrossingScore::to_json(){
+	nlohmann::json json;
+	json["waiting_time"] = this->waiting_time;
+	json["accident_count"] = this->accident_count;
+	json["casualties_count"] = this->casualties_count;
+	json["score"] = this->Score();
+	return json;
 }
 
 

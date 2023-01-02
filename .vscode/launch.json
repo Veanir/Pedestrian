@@ -9,12 +9,13 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/runtime",
-            "args": [],
+            "args": ["-pthread"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
+            "miDebuggerArgs": "-interpreter=mi -pthread",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",

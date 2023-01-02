@@ -18,5 +18,16 @@
         "impatience_time_max" : 360,
         "rush_ratio_min" : 0.0,
         "rush_ratio_max" : 0.1
+    },
+    "simulation_config" : {
+        "population_size" : 20,
+        "iterations" : 100,
+        "mutation_rate_initial" : 0.3,
+        "mutation_rate_final" : 0.01,
+        "best_percent" : 0.3,
+        "pedestrian_rate" : 20,
+        "car_rate" : 4,
+        "time" : 0.5,
+        "length" : 5.0
     }
 }

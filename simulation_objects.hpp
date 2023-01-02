@@ -5,6 +5,8 @@
 #include <random>
 #include <vector>
 
+#include <json.hpp>
+
 enum LightColor {
 	YellowGreen,
 	Green,
@@ -26,6 +28,9 @@ class LightConfig{
 	void print();
 
 	LightConfig();
+
+	nlohmann::json to_json();
+
 };
 
 class Light : public SimulationObject {
@@ -125,7 +130,10 @@ class CrossingScore{
 
 	float Score();
 	CrossingScore();
+
+	nlohmann::json to_json();
 };
+
 
 class Crossing: public SimulationObject{
 	private:

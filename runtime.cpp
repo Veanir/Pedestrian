@@ -14,34 +14,28 @@
 
 int main() {
 
-  std::ifstream config_file("config.json");
-  if(!config_file.is_open()){
-    std::cerr << "Could not open config file" << std::endl;
-    return 1;
-  }
+  SimulationNode node;
 
-  nlohmann::json config_data;
-  config_file >> config_data;
+  node.Simulate(8, 5, 20, 4);
 
-  SimulationMaster master;
-  master.population_size = 1000;
+  //std::ifstream config_file("config.json");
+  //if(!config_file.is_open()){
+    //std::cerr << "Could not open config file" << std::endl;
+    //return 1;
+  //}
 
-  master.pedestrian_config = parseSpawnConfig(config_data["pedestrian_config"]);
-  master.car_config = parseSpawnConfig(config_data["car_config"]);
+  //nlohmann::json config_data;
+  //config_file >> config_data;
 
-  master.AddNodesInitial();
+  //SimulationMaster master;
 
-  for(int i = 0; i < 100; i++){
-    master.Simulate(0.5, 5, 20, 4);
+  //master.pedestrian_config = parseSpawnConfig(config_data["pedestrian_config"]);
+  //master.car_config = parseSpawnConfig(config_data["car_config"]);
+  //master.parseConfig(config_data["simulation_config"]);
 
-    std::cout << "Generation: " << i << std::endl;
+  //master.AddNodesInitial();
 
-    master.SortByScore();
-    master.TakeBestPercent(0.2);
-    master.printNodes();
-    master.FillRestWithBest();
-    master.MutateNodes(0.2);
-  }
+  //master.Simulate();
 
   return 1;
 }
