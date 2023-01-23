@@ -20,15 +20,15 @@
         "rush_ratio_max" : 0.0
     },
     "simulation_config" : {
-        "population_size_initial" : 10000,
-        "population_size" : 1000,
-        "iterations" : 100,
+        "population_size_initial" : 1000,
+        "population_size" : 500,
+        "iterations" : 1000,
         "mutation_rate_initial" : 0.3,
         "mutation_rate_final" : 0.01,
         "best_percent_initial" : 0.3,
         "best_percent_final" : 0.1,
-        "pedestrian_rate" : 40,
-        "car_rate" : 20,
+        "pedestrian_rate" : 20,
+        "car_rate" : 5,
         "time" : 0.5,
         "length" : 5.0,
         "threads" : -1
